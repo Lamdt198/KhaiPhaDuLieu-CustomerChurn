@@ -8,5 +8,6 @@ env/
 .ipynb_checkpoints/
 ~$*.docx
 ~$*.pptx
+reports/Thiết kế mẫu.pptx
 .DS_Store
 Thumbs.db
