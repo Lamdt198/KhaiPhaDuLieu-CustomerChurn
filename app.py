@@ -1410,7 +1410,7 @@ def _streamlit_css(is_dark: bool) -> str:
         box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04) !important;
         margin-bottom: 14px !important;
     }}
-    .stTabs button[data-baseweb="tab"] {{
+    .stTabs [data-baseweb="tab"] {{
         height: 40px !important;
         padding: 8px 18px !important;
         border-radius: 7px !important;
@@ -1422,32 +1422,32 @@ def _streamlit_css(is_dark: bool) -> str:
         margin: 0 !important;
         transition: all 0.18s ease !important;
     }}
-    .stTabs button[data-baseweb="tab"] p,
-    .stTabs button[data-baseweb="tab"] span,
-    .stTabs button[data-baseweb="tab"] div {{
+    .stTabs [data-baseweb="tab"] p,
+    .stTabs [data-baseweb="tab"] span,
+    .stTabs [data-baseweb="tab"] div {{
         color: {t['muted']} !important;
     }}
-    .stTabs button[data-baseweb="tab"]:hover {{
+    .stTabs [data-baseweb="tab"]:hover {{
         background-color: {t['accent_soft']} !important;
         color: {t['accent']} !important;
         border-color: {t['accent']} !important;
         transform: translateY(-1px) !important;
     }}
-    .stTabs button[data-baseweb="tab"]:hover p,
-    .stTabs button[data-baseweb="tab"]:hover span,
-    .stTabs button[data-baseweb="tab"]:hover div {{
+    .stTabs [data-baseweb="tab"]:hover p,
+    .stTabs [data-baseweb="tab"]:hover span,
+    .stTabs [data-baseweb="tab"]:hover div {{
         color: {t['accent']} !important;
     }}
-    .stTabs button[data-baseweb="tab"][aria-selected="true"],
-    .stTabs button[data-baseweb="tab"][aria-selected="true"]:hover {{
+    .stTabs [data-baseweb="tab"][aria-selected="true"],
+    .stTabs [data-baseweb="tab"][aria-selected="true"]:hover {{
         background-color: {t['accent']} !important;
         color: #FFFFFF !important;
         border-color: {t['accent']} !important;
         box-shadow: 0 2px 6px rgba(30, 64, 175, 0.25) !important;
         transform: none !important;
     }}
-    .stTabs button[data-baseweb="tab"][aria-selected="true"] *,
-    .stTabs button[data-baseweb="tab"][aria-selected="true"]:hover * {{
+    .stTabs [data-baseweb="tab"][aria-selected="true"] *,
+    .stTabs [data-baseweb="tab"][aria-selected="true"]:hover * {{
         color: #FFFFFF !important;
     }}
     .hero-banner {{
@@ -1495,7 +1495,7 @@ def _streamlit_css(is_dark: bool) -> str:
         text-overflow: ellipsis;
     }}
     .kpi-value {{
-        font-size: 20px;
+        font-size: clamp(16px, 1.4vw, 19.5px);
         font-weight: 700;
         color: {t['text']} !important;
         line-height: 1.2;
