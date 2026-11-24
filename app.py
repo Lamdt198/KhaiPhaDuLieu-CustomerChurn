@@ -2519,9 +2519,9 @@ def run_streamlit_app():
         st.markdown("#### Kết quả thực nghiệm & Tri thức khai phá dữ liệu")
         sub0, sub1, sub2, sub3, sub4 = st.tabs([
             "Thực nghiệm động (Live)",
-            "Đối sánh cố định & ROC/PR",
+            "Đối sánh 5 mô hình",
             "Ablation Study",
-            "Khám phá dữ liệu (EDA)",
+            "Khám phá (EDA)",
             "SHAP & Luật CART",
         ])
 
