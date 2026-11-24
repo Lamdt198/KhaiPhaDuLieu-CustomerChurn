@@ -1660,6 +1660,47 @@ def _streamlit_css(is_dark: bool) -> str:
         font-size: 13px;
         color: {t['text']} !important;
     }}
+    /* Sidebar collapse / expand buttons */
+    [data-testid="stSidebarCollapseButton"] button,
+    [data-testid="stSidebarCollapsedControl"] button,
+    [data-testid="collapsedControl"] button,
+    [data-testid="stExpandSidebarButton"],
+    [data-testid="stSidebarHeader"] button {{
+        background: transparent !important;
+        border: 1px solid {t['border']} !important;
+        border-radius: 6px !important;
+        color: {t['muted']} !important;
+        box-shadow: none !important;
+        width: 32px !important;
+        height: 32px !important;
+        min-height: 32px !important;
+        padding: 0 !important;
+        transition: background .15s, color .15s, border-color .15s;
+    }}
+    [data-testid="stSidebarCollapseButton"] button:hover,
+    [data-testid="stSidebarCollapsedControl"] button:hover,
+    [data-testid="collapsedControl"] button:hover,
+    [data-testid="stExpandSidebarButton"]:hover,
+    [data-testid="stSidebarHeader"] button:hover {{
+        background: {t['accent_soft']} !important;
+        border-color: {t['accent_text']} !important;
+        color: {t['accent_text']} !important;
+    }}
+    [data-testid="stSidebarCollapseButton"] svg,
+    [data-testid="stSidebarCollapsedControl"] svg,
+    [data-testid="collapsedControl"] svg,
+    [data-testid="stExpandSidebarButton"] svg,
+    [data-testid="stSidebarHeader"] button svg,
+    [data-testid="stSidebarHeader"] button span {{
+        color: inherit !important;
+        fill: currentColor !important;
+    }}
+    header[data-testid="stHeader"] {{
+        background: {t['bg']} !important;
+    }}
+    header[data-testid="stHeader"] button {{
+        color: {t['muted']} !important;
+    }}
     </style>
     """
 
@@ -1969,6 +2010,10 @@ def run_streamlit_app():
         st.session_state["c_fn_input"] = 500
     if "c_fp_input" not in st.session_state:
         st.session_state["c_fp_input"] = 100
+    if "active_main_tab" not in st.session_state:
+        st.session_state["active_main_tab"] = "tab1"
+    if "active_sub_tab" not in st.session_state:
+        st.session_state["active_sub_tab"] = "sub0"
     if "threshold_slider" not in st.session_state:
         st.session_state["threshold_slider"] = float(bundle["optimal_threshold"])
 
@@ -2116,14 +2161,19 @@ def run_streamlit_app():
     st.markdown("<div style='height: 10px;'></div>", unsafe_allow_html=True)
 
     # ==================== MAIN TABS ====================
-    tab1, tab2, tab3 = st.tabs([
-        "1. Dự đoán khách hàng cá nhân",
-        "2. Chấm điểm danh sách (CSV)",
-        "3. Kết quả thực nghiệm mô hình",
-    ])
+    def _set_main_tab(k):
+        st.session_state["active_main_tab"] = k
+    _main_labels = ["1. Dự đoán khách hàng cá nhân", "2. Chấm điểm danh sách (CSV)", "3. Kết quả thực nghiệm mô hình"]
+    _main_cols = st.columns(3)
+    for _i, _lbl in enumerate(_main_labels):
+        _k = "tab%d" % (_i + 1)
+        _main_cols[_i].button(_lbl, key="nav_" + _k, use_container_width=True,
+            type="primary" if st.session_state["active_main_tab"] == _k else "secondary",
+            on_click=_set_main_tab, args=(_k,))
+    active_tab = st.session_state["active_main_tab"]
 
     # ==================== TAB 1 ====================
-    with tab1:
+    if active_tab == "tab1":
         st.markdown("#### Nạp nhanh hồ sơ khách hàng mẫu")
         p1, p2, p3 = st.columns(3)
         with p1:
@@ -2299,7 +2349,7 @@ def run_streamlit_app():
                 plt.close(fig_local)
 
     # ==================== TAB 2 ====================
-    with tab2:
+    elif active_tab == "tab2":
         st.markdown("#### Chấm điểm rủi ro hàng loạt & Phân tầng giữ chân khách hàng")
 
         for k, v in [
@@ -2515,17 +2565,20 @@ def run_streamlit_app():
         )
 
     # ==================== TAB 3 ====================
-    with tab3:
+    if active_tab == "tab3":
         st.markdown("#### Kết quả thực nghiệm & Tri thức khai phá dữ liệu")
-        sub0, sub1, sub2, sub3, sub4 = st.tabs([
-            "Thực nghiệm động (Live)",
-            "Đối sánh 5 mô hình",
-            "Ablation Study",
-            "Khám phá (EDA)",
-            "SHAP & Luật CART",
-        ])
+        def _set_sub_tab(k):
+            st.session_state["active_sub_tab"] = k
+        _sub_labels = ["Thực nghiệm động (Live)", "Đối sánh 5 mô hình", "Ablation Study", "Khám phá (EDA)", "SHAP & Luật CART"]
+        _sub_cols = st.columns([1.25, 1.05, 0.9, 0.9, 1.0], gap="small")
+        for _i, _lbl in enumerate(_sub_labels):
+            _k = "sub%d" % _i
+            _sub_cols[_i].button(_lbl, key="nav_" + _k, use_container_width=True,
+                type="primary" if st.session_state["active_sub_tab"] == _k else "secondary",
+                on_click=_set_sub_tab, args=(_k,))
+        active_sub = st.session_state["active_sub_tab"]
 
-        with sub0:
+        if active_sub == "sub0":
             st.markdown(
                 f"##### Đánh giá thời gian thực trên Tập Test độc lập (N = 1.409) — "
                 f"Mô hình: **{selected_model}** | Ngưỡng: **T = {threshold:.2f}** | "
@@ -2584,7 +2637,7 @@ def run_streamlit_app():
             st.markdown("##### Đối chứng 3 chiến lược vận hành động")
             render_html_table(pd.DataFrame(live_payload["roi_rows"]))
 
-        with sub1:
+        elif active_sub == "sub1":
             st.markdown("##### Bảng đối sánh cố định 5 mô hình phân loại trên tập Test độc lập (N = 1.409)")
             render_html_table(comp_df, highlight_col="Mô hình", highlight_val=selected_model)
 
@@ -2602,7 +2655,7 @@ def run_streamlit_app():
             if os.path.exists(p_fig6):
                 st.image(p_fig6, caption="Hình 6: Ma trận nhầm lẫn của LightGBM tại T = 0.50 và T* = 0.21", width="stretch")
 
-        with sub2:
+        elif active_sub == "sub2":
             st.markdown("##### Nghiên cứu cắt bỏ (Ablation Study) xử lý mất cân bằng trên LightGBM")
             ab_rows = []
             for strat_name, m in results["ablation_study"].items():
@@ -2623,7 +2676,7 @@ def run_streamlit_app():
             if os.path.exists(p_fig7):
                 st.image(p_fig7, caption="Hình 7: Tối ưu ngưỡng chi phí T* = 0.21 và đối chứng 4 chiến lược vận hành", width="stretch")
 
-        with sub3:
+        elif active_sub == "sub3":
             e1, e2 = st.columns(2)
             with e1:
                 p_fig1 = os.path.join(FIG_DIR, "fig01_churn_distribution.png")
@@ -2638,7 +2691,7 @@ def run_streamlit_app():
             if os.path.exists(p_fig3):
                 st.image(p_fig3, caption="Hình 3: Ma trận tương quan và mức độ liên hệ Cramér's V", width="stretch")
 
-        with sub4:
+        elif active_sub == "sub4":
             p_fig8 = os.path.join(FIG_DIR, "fig08_decision_tree_rules.png")
             if os.path.exists(p_fig8):
                 st.image(p_fig8, caption="Hình 8: Cây quyết định CART cắt tỉa độ sâu 3 phục vụ rút trích luật IF-THEN", width="stretch")
