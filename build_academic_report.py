@@ -285,6 +285,9 @@ def build_report():
         )
         p = c.paragraphs[0]
         p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
+        p.paragraph_format.first_line_indent = Pt(0)
+        p.paragraph_format.left_indent = Pt(0)
+        p.paragraph_format.right_indent = Pt(0)
         p.paragraph_format.space_before = Pt(2)
         p.paragraph_format.space_after = Pt(2)
         p.paragraph_format.line_spacing = 1.2
@@ -304,6 +307,9 @@ def build_report():
         if caption:
             pc = doc.add_paragraph()
             pc.alignment = WD_ALIGN_PARAGRAPH.CENTER
+            pc.paragraph_format.first_line_indent = Pt(0)
+            pc.paragraph_format.left_indent = Pt(0)
+            pc.paragraph_format.right_indent = Pt(0)
             pc.paragraph_format.space_before = Pt(6)
             pc.paragraph_format.space_after = Pt(4)
             pc.paragraph_format.keep_with_next = True
@@ -330,14 +336,16 @@ def build_report():
         tblPr = table._element.xpath("w:tblPr")[0]
         tblPr.append(parse_xml(f'<w:tblLayout {nsdecls("w")} w:type="fixed"/>'))
         tblPr.append(parse_xml(f'<w:tblW {nsdecls("w")} w:w="{sum(widths_dxa)}" w:type="dxa"/>'))
+        tblPr.append(parse_xml(f'<w:tblInd {nsdecls("w")} w:w="0" w:type="dxa"/>'))
         tblPr.append(
             parse_xml(
                 f'<w:tblBorders {nsdecls("w")}>'
-                f'<w:top w:val="single" w:sz="12" w:space="0" w:color="1E3A8A"/>'
-                f'<w:bottom w:val="single" w:sz="12" w:space="0" w:color="1E3A8A"/>'
-                f'<w:left w:val="none"/><w:right w:val="none"/>'
-                f'<w:insideH w:val="single" w:sz="4" w:space="0" w:color="E2E8F0"/>'
-                f'<w:insideV w:val="none"/>'
+                f'<w:top w:val="single" w:sz="8" w:space="0" w:color="1E3A8A"/>'
+                f'<w:bottom w:val="single" w:sz="8" w:space="0" w:color="1E3A8A"/>'
+                f'<w:left w:val="single" w:sz="8" w:space="0" w:color="1E3A8A"/>'
+                f'<w:right w:val="single" w:sz="8" w:space="0" w:color="1E3A8A"/>'
+                f'<w:insideH w:val="single" w:sz="4" w:space="0" w:color="94A3B8"/>'
+                f'<w:insideV w:val="single" w:sz="4" w:space="0" w:color="94A3B8"/>'
                 f"</w:tblBorders>"
             )
         )
@@ -371,6 +379,9 @@ def build_report():
             cell.vertical_alignment = WD_ALIGN_VERTICAL.CENTER
             p = cell.paragraphs[0]
             p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+            p.paragraph_format.first_line_indent = Pt(0)
+            p.paragraph_format.left_indent = Pt(0)
+            p.paragraph_format.right_indent = Pt(0)
             p.paragraph_format.space_before = Pt(0)
             p.paragraph_format.space_after = Pt(0)
             r = p.add_run(htxt)
@@ -394,6 +405,9 @@ def build_report():
                 cell.vertical_alignment = WD_ALIGN_VERTICAL.CENTER
                 p = cell.paragraphs[0]
                 p.alignment = WD_ALIGN_PARAGRAPH.CENTER if col_center[c_idx] else WD_ALIGN_PARAGRAPH.LEFT
+                p.paragraph_format.first_line_indent = Pt(0)
+                p.paragraph_format.left_indent = Pt(0)
+                p.paragraph_format.right_indent = Pt(0)
                 p.paragraph_format.space_before = Pt(0)
                 p.paragraph_format.space_after = Pt(0)
                 p.paragraph_format.line_spacing = 1.08
@@ -466,7 +480,7 @@ def build_report():
             ["4", "Phạm Văn Chiến", "Thành viên", "Tối ưu ngưỡng chi phí, trích xuất luật CART, giải thích SHAP toàn cục/cục bộ và phân tích lỗi, viết Chương 4.", "20%"],
             ["5", "Vàng A Hứ", "Thành viên", "Đối chứng chi phí 4 kịch bản vận hành, xây dựng ứng dụng minh họa Streamlit, viết Chương 5 và biên tập Slide.", "20%"],
         ],
-        col_widths=[0.45, 1.35, 0.95, 3.10, 0.65],
+        col_widths=[0.50, 1.45, 1.00, 2.80, 0.75],
         caption="Bảng 0.1: Phân công nhiệm vụ các thành viên Nhóm 02",
     )
 
