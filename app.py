@@ -192,6 +192,10 @@ def _build_wsgi_html(data: dict) -> str:
       border-top: 3px solid var(--accent);
       border-radius: 8px;
       padding: 14px 16px;
+      height: 118px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
     }}
     .kpi-label {{
       font-size: 11.5px;
@@ -199,11 +203,17 @@ def _build_wsgi_html(data: dict) -> str:
       text-transform: uppercase;
       letter-spacing: 0.4px;
       color: var(--muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }}
     .kpi-val {{
-      font-size: 21px;
+      font-size: 20px;
       font-weight: 700;
       margin: 4px 0;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }}
     .kpi-sub {{
       font-size: 12px;
@@ -597,7 +607,7 @@ def _build_wsgi_html(data: dict) -> str:
       <div id="batch-staged-status" class="status-box status-low" style="margin:0 0 12px 0;"></div>
 
       <div class="btn-row">
-        <button class="btn btn-primary" onclick="runBatchScoring()">Bắt đầu chấm điểm danh sách</button>
+        <button class="btn btn-primary" onclick="runBatchScoring()">Chấm điểm</button>
         <button class="btn" onclick="resetBatchSelection()">Xóa kết quả / Chọn lại</button>
         <button id="btn-dl-result" class="btn" onclick="downloadBatchResult()" style="display:none;">Tải xuống kết quả dự đoán (CSV)</button>
       </div>
@@ -848,9 +858,9 @@ def _build_wsgi_html(data: dict) -> str:
       const box = document.getElementById("batch-staged-status");
       if (lastCsvText !== null) {{
         const lineCount = Math.max(0, lastCsvText.trim().split(/\\r?\\n/).length - 1);
-        box.innerHTML = `<strong>Đã nạp tệp:</strong> ${{uploadedFileName}} (${{lineCount}} dòng). Bấm nút <b>"Bắt đầu chấm điểm danh sách"</b> để chạy mô hình.`;
+        box.innerHTML = `<strong>Đã nạp tệp:</strong> ${{uploadedFileName}} (${{lineCount}} dòng). Bấm nút <b>"Chấm điểm"</b> để chạy mô hình.`;
       }} else {{
-        box.innerHTML = `<strong>Dữ liệu đang chọn:</strong> Bộ mẫu ngẫu nhiên <b>${{n}} khách hàng</b> (Seed #${{sampleSeed}}). Bấm nút <b>"Bắt đầu chấm điểm danh sách"</b> để chạy mô hình.`;
+        box.innerHTML = `<strong>Dữ liệu đang chọn:</strong> Bộ mẫu ngẫu nhiên <b>${{n}} khách hàng</b> (Seed #${{sampleSeed}}). Bấm nút <b>"Chấm điểm"</b> để chạy mô hình.`;
       }}
     }}
 
@@ -904,11 +914,13 @@ def _build_wsgi_html(data: dict) -> str:
         hasScoredBatch = true;
         document.getElementById("batch-results-area").style.display = "block";
         document.getElementById("btn-dl-result").style.display = "inline-block";
+        const totalCount = data.total || 1;
+        const highPct = ((data.n_high_50 / totalCount) * 100).toFixed(1);
         document.getElementById("batch-kpis").innerHTML = `
-          <div class="kpi-card"><div class="kpi-label">Tổng số khách hàng</div><div class="kpi-val">${{data.total}}</div></div>
-          <div class="kpi-card"><div class="kpi-label">Cần can thiệp (&gt;= ${{thr.toFixed(2)}})</div><div class="kpi-val">${{data.n_intervene}}</div><div class="kpi-sub">${{data.intervene_pct}}% danh sách</div></div>
-          <div class="kpi-card"><div class="kpi-label">Nguy cơ cao (&gt;= 0.50)</div><div class="kpi-val">${{data.n_high_50}}</div></div>
-          <div class="kpi-card"><div class="kpi-label">Ngân sách ưu đãi dự kiến</div><div class="kpi-val">$${{data.budget_usd.toLocaleString()}}</div><div class="kpi-sub">100 USD / KH can thiệp</div></div>
+          <div class="kpi-card"><div class="kpi-label">Tổng số khách hàng</div><div class="kpi-val">${{data.total}}</div><div class="kpi-sub">100% danh sách chấm điểm</div></div>
+          <div class="kpi-card amber"><div class="kpi-label">Cần can thiệp (&gt;= ${{thr.toFixed(2)}})</div><div class="kpi-val">${{data.n_intervene}}</div><div class="kpi-sub">Chiếm ${{data.intervene_pct}}% danh sách</div></div>
+          <div class="kpi-card indigo"><div class="kpi-label">Nguy cơ cao (&gt;= 0.50)</div><div class="kpi-val">${{data.n_high_50}}</div><div class="kpi-sub">Chiếm ${{highPct}}% danh sách</div></div>
+          <div class="kpi-card teal"><div class="kpi-label">Ngân sách dự kiến</div><div class="kpi-val">$${{data.budget_usd.toLocaleString()}}</div><div class="kpi-sub">Định mức 100 USD / KH can thiệp</div></div>
         `;
         renderBatchTable();
       }} finally {{
@@ -1250,6 +1262,9 @@ def _streamlit_css(is_dark: bool) -> str:
         color: #FFFFFF !important;
         border-radius: 6px !important;
         font-weight: 600 !important;
+        min-height: 40px !important;
+        height: 40px !important;
+        white-space: nowrap !important;
         transition: all 0.16s ease;
     }}
     button[kind="primary"] *,
@@ -1274,6 +1289,9 @@ def _streamlit_css(is_dark: bool) -> str:
         color: {t['text']} !important;
         border-radius: 6px !important;
         font-weight: 600 !important;
+        min-height: 40px !important;
+        height: 40px !important;
+        white-space: nowrap !important;
         transition: all 0.16s ease;
     }}
     button[kind="secondary"] *,
@@ -1450,7 +1468,10 @@ def _streamlit_css(is_dark: bool) -> str:
         border-top: 3px solid {t['accent']};
         border-radius: 8px;
         padding: 14px 16px;
-        height: 100%;
+        height: 120px;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
     }}
     .kpi-card.amber {{ border-top-color: #D97706; }}
     .kpi-card.teal {{ border-top-color: #059669; }}
@@ -1462,17 +1483,24 @@ def _streamlit_css(is_dark: bool) -> str:
         text-transform: uppercase;
         letter-spacing: 0.4px;
         margin-bottom: 4px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }}
     .kpi-value {{
-        font-size: 21px;
+        font-size: 20px;
         font-weight: 700;
         color: {t['text']} !important;
         line-height: 1.2;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }}
     .kpi-sub {{
         font-size: 12px;
         color: {t['muted']} !important;
-        margin-top: 5px;
+        margin-top: 4px;
+        line-height: 1.3;
     }}
     .risk-box {{
         padding: 14px 16px;
@@ -2166,11 +2194,11 @@ def run_streamlit_app():
             "Thêm hoặc kéo thả tệp CSV danh sách khách hàng vào đây (Drag & Drop)",
             type=["csv"],
             key=f"csv_uploader_{st.session_state['uploader_key']}",
-            help="Hỗ trợ kéo thả file .csv. Sau khi chọn tệp, bấm nút 'Bắt đầu chấm điểm danh sách' bên dưới để chạy mô hình.",
+            help="Hỗ trợ kéo thả file .csv. Sau khi chọn tệp, bấm nút 'Chấm điểm' bên dưới để chạy mô hình.",
         )
 
         # Thanh chọn dữ liệu mẫu ngẫu nhiên & tải xuống nhỏ gọn bên dưới khung Upload
-        sc1, sc2, sc3 = st.columns([1.15, 1.35, 1.35])
+        sc1, sc2, sc3 = st.columns([1.2, 1.4, 1.4], vertical_alignment="bottom")
         with sc1:
             sample_n = st.selectbox(
                 "Kích thước mẫu ngẫu nhiên (KH)",
@@ -2179,7 +2207,6 @@ def run_streamlit_app():
             )
         sample_csv_str = load_random_sample_csv(sample_n, st.session_state["sample_seed"])
         with sc2:
-            st.markdown("<div style='height: 27px;'></div>", unsafe_allow_html=True)
             if st.button("Đổi mẫu ngẫu nhiên (Random)", width="stretch", key="btn_random_sample"):
                 st.session_state["sample_seed"] = int(st.session_state["sample_seed"]) + 1
                 st.session_state["batch_scored_raw"] = None
@@ -2187,7 +2214,6 @@ def run_streamlit_app():
                 st.session_state["batch_scored_sig"] = ""
                 st.rerun()
         with sc3:
-            st.markdown("<div style='height: 27px;'></div>", unsafe_allow_html=True)
             st.download_button(
                 f"Tải tệp CSV mẫu ({sample_n} KH)",
                 data=sample_csv_str.encode("utf-8-sig"),
@@ -2227,7 +2253,7 @@ def run_streamlit_app():
             if st.session_state["batch_scored_probs"] is None:
                 st.info(
                     f"Đã sẵn sàng nguồn dữ liệu — {staged_source}. "
-                    f"Bấm nút **\"Bắt đầu chấm điểm danh sách\"** để chạy mô hình dự đoán."
+                    f"Bấm nút **\"Chấm điểm\"** để chạy mô hình dự đoán."
                 )
             else:
                 st.success(
@@ -2235,10 +2261,10 @@ def run_streamlit_app():
                     f"Ngưỡng phân loại: **T = {threshold:.2f}**"
                 )
 
-        act1, act2, _ = st.columns([1.4, 1.0, 1.4])
+        act1, act2, _ = st.columns([1.0, 1.2, 1.8], vertical_alignment="center")
         with act1:
             run_batch_btn = st.button(
-                "Bắt đầu chấm điểm danh sách",
+                "Chấm điểm",
                 type="primary",
                 width="stretch",
                 key="btn_run_batch",
@@ -2301,12 +2327,54 @@ def run_streamlit_app():
             n_high = int((probs >= threshold).sum())
             n_very_high = int((probs >= 0.50).sum())
             est_campaign_cost = n_high * 100
+            total_cnt = len(out_df) if len(out_df) > 0 else 1
 
             m1, m2, m3, m4 = st.columns(4)
-            m1.metric("Tổng số khách hàng", f"{len(out_df):,}")
-            m2.metric(f"KH cần can thiệp (>= {threshold:.2f})", f"{n_high:,}", f"{n_high/len(out_df)*100:.1f}%")
-            m3.metric("KH nguy cơ cao (>= 0.50)", f"{n_very_high:,}")
-            m4.metric("Ngân sách dự kiến", f"${est_campaign_cost:,}", "100 USD / KH can thiệp")
+            with m1:
+                st.markdown(
+                    f"""
+                    <div class="kpi-card">
+                        <div class="kpi-label">Tổng số khách hàng</div>
+                        <div class="kpi-value">{len(out_df):,}</div>
+                        <div class="kpi-sub">100% danh sách chấm điểm</div>
+                    </div>
+                    """,
+                    unsafe_allow_html=True,
+                )
+            with m2:
+                st.markdown(
+                    f"""
+                    <div class="kpi-card amber">
+                        <div class="kpi-label">KH cần can thiệp (&gt;= {threshold:.2f})</div>
+                        <div class="kpi-value">{n_high:,}</div>
+                        <div class="kpi-sub">Chiếm {n_high/total_cnt*100:.1f}% tổng số KH</div>
+                    </div>
+                    """,
+                    unsafe_allow_html=True,
+                )
+            with m3:
+                st.markdown(
+                    f"""
+                    <div class="kpi-card indigo">
+                        <div class="kpi-label">KH nguy cơ cao (&gt;= 0.50)</div>
+                        <div class="kpi-value">{n_very_high:,}</div>
+                        <div class="kpi-sub">Chiếm {n_very_high/total_cnt*100:.1f}% tổng số KH</div>
+                    </div>
+                    """,
+                    unsafe_allow_html=True,
+                )
+            with m4:
+                st.markdown(
+                    f"""
+                    <div class="kpi-card teal">
+                        <div class="kpi-label">Ngân sách dự kiến</div>
+                        <div class="kpi-value">${est_campaign_cost:,}</div>
+                        <div class="kpi-sub">Định mức 100 USD / KH can thiệp</div>
+                    </div>
+                    """,
+                    unsafe_allow_html=True,
+                )
+            st.markdown("<div style='height: 10px;'></div>", unsafe_allow_html=True)
 
             with st.container(border=True):
                 fig_batch = plot_batch_distribution(probs, threshold, is_dark)
