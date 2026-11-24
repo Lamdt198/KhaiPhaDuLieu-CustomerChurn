@@ -1,0 +1,437 @@
+{
+  "audit": {
+    "n_rows": 7043,
+    "n_raw_cols": 21,
+    "n_features_engineered": 25,
+    "missing_total_charges": 11,
+    "duplicate_rows": 0,
+    "churn_count": 1869,
+    "non_churn_count": 5174,
+    "churn_rate": 0.2654
+  },
+  "chi2_top12": [
+    {
+      "feature": "Contract",
+      "chi2": 1184.6,
+      "dof": 2,
+      "p_value": 5.863e-258,
+      "cramers_v": 0.4101,
+      "significant": true
+    },
+    {
+      "feature": "TenureGroup",
+      "chi2": 927.33,
+      "dof": 4,
+      "p_value": 1.996e-199,
+      "cramers_v": 0.3629,
+      "significant": true
+    },
+    {
+      "feature": "OnlineSecurity",
+      "chi2": 850.0,
+      "dof": 2,
+      "p_value": 2.661e-185,
+      "cramers_v": 0.3474,
+      "significant": true
+    },
+    {
+      "feature": "TechSupport",
+      "chi2": 828.2,
+      "dof": 2,
+      "p_value": 1.443e-180,
+      "cramers_v": 0.3429,
+      "significant": true
+    },
+    {
+      "feature": "InternetService",
+      "chi2": 732.31,
+      "dof": 2,
+      "p_value": 9.572e-160,
+      "cramers_v": 0.3225,
+      "significant": true
+    },
+    {
+      "feature": "PaymentMethod",
+      "chi2": 648.14,
+      "dof": 3,
+      "p_value": 3.682e-140,
+      "cramers_v": 0.3034,
+      "significant": true
+    },
+    {
+      "feature": "OnlineBackup",
+      "chi2": 601.81,
+      "dof": 2,
+      "p_value": 2.08e-131,
+      "cramers_v": 0.2923,
+      "significant": true
+    },
+    {
+      "feature": "DeviceProtection",
+      "chi2": 558.42,
+      "dof": 2,
+      "p_value": 5.505e-122,
+      "cramers_v": 0.2816,
+      "significant": true
+    },
+    {
+      "feature": "StreamingMovies",
+      "chi2": 375.66,
+      "dof": 2,
+      "p_value": 2.668e-82,
+      "cramers_v": 0.231,
+      "significant": true
+    },
+    {
+      "feature": "StreamingTV",
+      "chi2": 374.2,
+      "dof": 2,
+      "p_value": 5.529e-82,
+      "cramers_v": 0.2305,
+      "significant": true
+    },
+    {
+      "feature": "IsAutoPayment",
+      "chi2": 309.35,
+      "dof": 1,
+      "p_value": 3.028e-69,
+      "cramers_v": 0.2096,
+      "significant": true
+    },
+    {
+      "feature": "PaperlessBilling",
+      "chi2": 258.28,
+      "dof": 1,
+      "p_value": 4.073e-58,
+      "cramers_v": 0.1915,
+      "significant": true
+    }
+  ],
+  "chi2_all": [
+    {
+      "feature": "Contract",
+      "chi2": 1184.6,
+      "dof": 2,
+      "p_value": 5.863e-258,
+      "cramers_v": 0.4101,
+      "significant": true
+    },
+    {
+      "feature": "TenureGroup",
+      "chi2": 927.33,
+      "dof": 4,
+      "p_value": 1.996e-199,
+      "cramers_v": 0.3629,
+      "significant": true
+    },
+    {
+      "feature": "OnlineSecurity",
+      "chi2": 850.0,
+      "dof": 2,
+      "p_value": 2.661e-185,
+      "cramers_v": 0.3474,
+      "significant": true
+    },
+    {
+      "feature": "TechSupport",
+      "chi2": 828.2,
+      "dof": 2,
+      "p_value": 1.443e-180,
+      "cramers_v": 0.3429,
+      "significant": true
+    },
+    {
+      "feature": "InternetService",
+      "chi2": 732.31,
+      "dof": 2,
+      "p_value": 9.572e-160,
+      "cramers_v": 0.3225,
+      "significant": true
+    },
+    {
+      "feature": "PaymentMethod",
+      "chi2": 648.14,
+      "dof": 3,
+      "p_value": 3.682e-140,
+      "cramers_v": 0.3034,
+      "significant": true
+    },
+    {
+      "feature": "OnlineBackup",
+      "chi2": 601.81,
+      "dof": 2,
+      "p_value": 2.08e-131,
+      "cramers_v": 0.2923,
+      "significant": true
+    },
+    {
+      "feature": "DeviceProtection",
+      "chi2": 558.42,
+      "dof": 2,
+      "p_value": 5.505e-122,
+      "cramers_v": 0.2816,
+      "significant": true
+    },
+    {
+      "feature": "StreamingMovies",
+      "chi2": 375.66,
+      "dof": 2,
+      "p_value": 2.668e-82,
+      "cramers_v": 0.231,
+      "significant": true
+    },
+    {
+      "feature": "StreamingTV",
+      "chi2": 374.2,
+      "dof": 2,
+      "p_value": 5.529e-82,
+      "cramers_v": 0.2305,
+      "significant": true
+    },
+    {
+      "feature": "IsAutoPayment",
+      "chi2": 309.35,
+      "dof": 1,
+      "p_value": 3.028e-69,
+      "cramers_v": 0.2096,
+      "significant": true
+    },
+    {
+      "feature": "PaperlessBilling",
+      "chi2": 258.28,
+      "dof": 1,
+      "p_value": 4.073e-58,
+      "cramers_v": 0.1915,
+      "significant": true
+    },
+    {
+      "feature": "HasProtectionBundle",
+      "chi2": 234.37,
+      "dof": 1,
+      "p_value": 6.654e-53,
+      "cramers_v": 0.1824,
+      "significant": true
+    },
+    {
+      "feature": "Dependents",
+      "chi2": 189.13,
+      "dof": 1,
+      "p_value": 4.925e-43,
+      "cramers_v": 0.1639,
+      "significant": true
+    },
+    {
+      "feature": "SeniorCitizen",
+      "chi2": 159.43,
+      "dof": 1,
+      "p_value": 1.51e-36,
+      "cramers_v": 0.1505,
+      "significant": true
+    },
+    {
+      "feature": "Partner",
+      "chi2": 158.73,
+      "dof": 1,
+      "p_value": 2.14e-36,
+      "cramers_v": 0.1501,
+      "significant": true
+    },
+    {
+      "feature": "MultipleLines",
+      "chi2": 11.33,
+      "dof": 2,
+      "p_value": 0.003464,
+      "cramers_v": 0.0401,
+      "significant": true
+    },
+    {
+      "feature": "PhoneService",
+      "chi2": 0.92,
+      "dof": 1,
+      "p_value": 0.3388,
+      "cramers_v": 0.0114,
+      "significant": false
+    },
+    {
+      "feature": "gender",
+      "chi2": 0.48,
+      "dof": 1,
+      "p_value": 0.4866,
+      "cramers_v": 0.0083,
+      "significant": false
+    }
+  ],
+  "mann_whitney": [
+    {
+      "feature": "tenure",
+      "median_non_churn": 38.0,
+      "median_churn": 10.0,
+      "mean_non_churn": 37.57,
+      "mean_churn": 17.98,
+      "u_stat": 7154668.0,
+      "p_value": 2.42e-208,
+      "significant": true
+    },
+    {
+      "feature": "MonthlyCharges",
+      "median_non_churn": 64.43,
+      "median_churn": 79.65,
+      "mean_non_churn": 61.27,
+      "mean_churn": 74.44,
+      "u_stat": 3667080.5,
+      "p_value": 3.312e-54,
+      "significant": true
+    },
+    {
+      "feature": "TotalCharges",
+      "median_non_churn": 1679.53,
+      "median_churn": 703.55,
+      "mean_non_churn": 2549.91,
+      "mean_churn": 1531.8,
+      "u_stat": 6288982.0,
+      "p_value": 5.685e-83,
+      "significant": true
+    },
+    {
+      "feature": "AvgMonthlySpend",
+      "median_non_churn": 63.98,
+      "median_churn": 79.31,
+      "mean_non_churn": 61.27,
+      "mean_churn": 74.43,
+      "u_stat": 3664846.0,
+      "p_value": 2.087e-54,
+      "significant": true
+    },
+    {
+      "feature": "ChargeDiff",
+      "median_non_churn": 0.0,
+      "median_churn": 0.0,
+      "mean_non_churn": -0.0,
+      "mean_churn": 0.01,
+      "u_stat": 4805421.0,
+      "p_value": 0.6935,
+      "significant": false
+    },
+    {
+      "feature": "TotalAddonServices",
+      "median_non_churn": 2.0,
+      "median_churn": 2.0,
+      "mean_non_churn": 2.14,
+      "mean_churn": 1.77,
+      "u_stat": 5206259.5,
+      "p_value": 4.735e-07,
+      "significant": true
+    }
+  ],
+  "group_breakdown": {
+    "Contract": [
+      {
+        "category": "Month-to-month",
+        "count": 3875,
+        "churn_rate_pct": 42.71
+      },
+      {
+        "category": "One year",
+        "count": 1473,
+        "churn_rate_pct": 11.27
+      },
+      {
+        "category": "Two year",
+        "count": 1695,
+        "churn_rate_pct": 2.83
+      }
+    ],
+    "InternetService": [
+      {
+        "category": "DSL",
+        "count": 2421,
+        "churn_rate_pct": 18.96
+      },
+      {
+        "category": "Fiber optic",
+        "count": 3096,
+        "churn_rate_pct": 41.89
+      },
+      {
+        "category": "No",
+        "count": 1526,
+        "churn_rate_pct": 7.4
+      }
+    ],
+    "PaymentMethod": [
+      {
+        "category": "Bank transfer (automatic)",
+        "count": 1544,
+        "churn_rate_pct": 16.71
+      },
+      {
+        "category": "Credit card (automatic)",
+        "count": 1522,
+        "churn_rate_pct": 15.24
+      },
+      {
+        "category": "Electronic check",
+        "count": 2365,
+        "churn_rate_pct": 45.29
+      },
+      {
+        "category": "Mailed check",
+        "count": 1612,
+        "churn_rate_pct": 19.11
+      }
+    ],
+    "TenureGroup": [
+      {
+        "category": "0-6m",
+        "count": 1481,
+        "churn_rate_pct": 52.94
+      },
+      {
+        "category": "13-24m",
+        "count": 1024,
+        "churn_rate_pct": 28.71
+      },
+      {
+        "category": "25-48m",
+        "count": 1594,
+        "churn_rate_pct": 20.39
+      },
+      {
+        "category": "7-12m",
+        "count": 705,
+        "churn_rate_pct": 35.89
+      },
+      {
+        "category": ">48m",
+        "count": 2239,
+        "churn_rate_pct": 9.51
+      }
+    ],
+    "HasProtectionBundle": [
+      {
+        "category": "0.0",
+        "count": 4079,
+        "churn_rate_pct": 33.42
+      },
+      {
+        "category": "1.0",
+        "count": 2964,
+        "churn_rate_pct": 17.07
+      }
+    ],
+    "IsAutoPayment": [
+      {
+        "category": "0.0",
+        "count": 3977,
+        "churn_rate_pct": 34.67
+      },
+      {
+        "category": "1.0",
+        "count": 3066,
+        "churn_rate_pct": 15.98
+      }
+    ]
+  },
+  "pearson_tenure_totalcharges": 0.826,
+  "pearson_monthly_totalcharges": 0.651
+}

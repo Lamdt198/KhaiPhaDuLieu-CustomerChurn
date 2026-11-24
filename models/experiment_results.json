@@ -1,0 +1,591 @@
+{
+  "dataset_audit": {
+    "n_rows": 7043,
+    "n_raw_cols": 21,
+    "n_features_engineered": 25,
+    "missing_total_charges": 11,
+    "duplicate_rows": 0,
+    "churn_count": 1869,
+    "non_churn_count": 5174,
+    "churn_rate": 0.2654
+  },
+  "split": {
+    "train_size": 5634,
+    "test_size": 1409,
+    "train_churn_rate": 0.2654,
+    "test_churn_rate": 0.2654
+  },
+  "cv_roc_auc": {
+    "Logistic Regression": 0.8471,
+    "Decision Tree (CART)": 0.8295,
+    "Random Forest": 0.8477,
+    "XGBoost": 0.8493,
+    "LightGBM": 0.8494
+  },
+  "best_params": {
+    "Logistic Regression": {
+      "C": 1.0
+    },
+    "Decision Tree (CART)": {
+      "max_depth": 5,
+      "min_samples_leaf": 60
+    },
+    "Random Forest": {
+      "max_depth": 8,
+      "min_samples_leaf": 10
+    },
+    "XGBoost": {
+      "learning_rate": 0.03,
+      "max_depth": 3,
+      "n_estimators": 200
+    },
+    "LightGBM": {
+      "learning_rate": 0.03,
+      "max_depth": 3,
+      "n_estimators": 200,
+      "num_leaves": 15
+    }
+  },
+  "train_times_sec": {
+    "Logistic Regression": 4.32,
+    "Decision Tree (CART)": 1.84,
+    "Random Forest": 6.26,
+    "XGBoost": 3.32,
+    "LightGBM": 8.51
+  },
+  "test_metrics_at_050": {
+    "Logistic Regression": {
+      "threshold": 0.5,
+      "accuracy": 0.7991,
+      "precision": 0.6553,
+      "recall": 0.5134,
+      "f1": 0.5757,
+      "roc_auc": 0.8452,
+      "pr_auc": 0.6518,
+      "brier": 0.1364,
+      "tn": 934,
+      "fp": 101,
+      "fn": 182,
+      "tp": 192,
+      "total_cost_usd": 120300.0,
+      "avg_cost_per_customer_usd": 85.38
+    },
+    "Decision Tree (CART)": {
+      "threshold": 0.5,
+      "accuracy": 0.7956,
+      "precision": 0.6405,
+      "recall": 0.5241,
+      "f1": 0.5765,
+      "roc_auc": 0.8249,
+      "pr_auc": 0.6224,
+      "brier": 0.141,
+      "tn": 925,
+      "fp": 110,
+      "fn": 178,
+      "tp": 196,
+      "total_cost_usd": 119600.0,
+      "avg_cost_per_customer_usd": 84.88
+    },
+    "Random Forest": {
+      "threshold": 0.5,
+      "accuracy": 0.8041,
+      "precision": 0.6738,
+      "recall": 0.508,
+      "f1": 0.5793,
+      "roc_auc": 0.8444,
+      "pr_auc": 0.6602,
+      "brier": 0.1355,
+      "tn": 943,
+      "fp": 92,
+      "fn": 184,
+      "tp": 190,
+      "total_cost_usd": 120200.0,
+      "avg_cost_per_customer_usd": 85.31
+    },
+    "XGBoost": {
+      "threshold": 0.5,
+      "accuracy": 0.8084,
+      "precision": 0.6769,
+      "recall": 0.5321,
+      "f1": 0.5958,
+      "roc_auc": 0.847,
+      "pr_auc": 0.6645,
+      "brier": 0.1347,
+      "tn": 940,
+      "fp": 95,
+      "fn": 175,
+      "tp": 199,
+      "total_cost_usd": 116900.0,
+      "avg_cost_per_customer_usd": 82.97
+    },
+    "LightGBM": {
+      "threshold": 0.5,
+      "accuracy": 0.807,
+      "precision": 0.6796,
+      "recall": 0.516,
+      "f1": 0.5866,
+      "roc_auc": 0.8462,
+      "pr_auc": 0.6657,
+      "brier": 0.1348,
+      "tn": 944,
+      "fp": 91,
+      "fn": 181,
+      "tp": 193,
+      "total_cost_usd": 118900.0,
+      "avg_cost_per_customer_usd": 84.39
+    }
+  },
+  "test_metrics_at_tstar": {
+    "Logistic Regression": {
+      "threshold": 0.21,
+      "accuracy": 0.7218,
+      "precision": 0.4862,
+      "recall": 0.8449,
+      "f1": 0.6172,
+      "roc_auc": 0.8452,
+      "pr_auc": 0.6518,
+      "brier": 0.1364,
+      "tn": 701,
+      "fp": 334,
+      "fn": 58,
+      "tp": 316,
+      "total_cost_usd": 94000.0,
+      "avg_cost_per_customer_usd": 66.71
+    },
+    "Decision Tree (CART)": {
+      "threshold": 0.21,
+      "accuracy": 0.7182,
+      "precision": 0.4809,
+      "recall": 0.7727,
+      "f1": 0.5928,
+      "roc_auc": 0.8249,
+      "pr_auc": 0.6224,
+      "brier": 0.141,
+      "tn": 723,
+      "fp": 312,
+      "fn": 85,
+      "tp": 289,
+      "total_cost_usd": 102600.0,
+      "avg_cost_per_customer_usd": 72.82
+    },
+    "Random Forest": {
+      "threshold": 0.21,
+      "accuracy": 0.7069,
+      "precision": 0.4713,
+      "recall": 0.8556,
+      "f1": 0.6078,
+      "roc_auc": 0.8444,
+      "pr_auc": 0.6602,
+      "brier": 0.1355,
+      "tn": 676,
+      "fp": 359,
+      "fn": 54,
+      "tp": 320,
+      "total_cost_usd": 94900.0,
+      "avg_cost_per_customer_usd": 67.35
+    },
+    "XGBoost": {
+      "threshold": 0.21,
+      "accuracy": 0.7197,
+      "precision": 0.4838,
+      "recall": 0.8369,
+      "f1": 0.6131,
+      "roc_auc": 0.847,
+      "pr_auc": 0.6645,
+      "brier": 0.1347,
+      "tn": 701,
+      "fp": 334,
+      "fn": 61,
+      "tp": 313,
+      "total_cost_usd": 95200.0,
+      "avg_cost_per_customer_usd": 67.57
+    },
+    "LightGBM": {
+      "threshold": 0.21,
+      "accuracy": 0.7175,
+      "precision": 0.4818,
+      "recall": 0.8476,
+      "f1": 0.6143,
+      "roc_auc": 0.8462,
+      "pr_auc": 0.6657,
+      "brier": 0.1348,
+      "tn": 694,
+      "fp": 341,
+      "fn": 57,
+      "tp": 317,
+      "total_cost_usd": 94300.0,
+      "avg_cost_per_customer_usd": 66.93
+    }
+  },
+  "best_model_name": "LightGBM",
+  "best_tree_name": "LightGBM",
+  "optimal_threshold": 0.21,
+  "bayes_theoretical_threshold": 0.2,
+  "cost_matrix": {
+    "C_FP": 100.0,
+    "C_TP": 100.0,
+    "C_FN": 500.0,
+    "C_TN": 0.0
+  },
+  "ablation_study": {
+    "Unweighted (T=0.50)": {
+      "threshold": 0.5,
+      "accuracy": 0.807,
+      "precision": 0.6796,
+      "recall": 0.516,
+      "f1": 0.5866,
+      "roc_auc": 0.8462,
+      "pr_auc": 0.6657,
+      "brier": 0.1348,
+      "tn": 944,
+      "fp": 91,
+      "fn": 181,
+      "tp": 193,
+      "total_cost_usd": 118900.0,
+      "avg_cost_per_customer_usd": 84.39
+    },
+    "Class-Weighted Balanced (T=0.50)": {
+      "threshold": 0.5,
+      "accuracy": 0.7424,
+      "precision": 0.5094,
+      "recall": 0.7995,
+      "f1": 0.6223,
+      "roc_auc": 0.8458,
+      "pr_auc": 0.6639,
+      "brier": 0.163,
+      "tn": 747,
+      "fp": 288,
+      "fn": 75,
+      "tp": 299,
+      "total_cost_usd": 96200.0,
+      "avg_cost_per_customer_usd": 68.28
+    },
+    "Cost-Sensitive Optimal (T*=0.21)": {
+      "threshold": 0.21,
+      "accuracy": 0.7175,
+      "precision": 0.4818,
+      "recall": 0.8476,
+      "f1": 0.6143,
+      "roc_auc": 0.8462,
+      "pr_auc": 0.6657,
+      "brier": 0.1348,
+      "tn": 694,
+      "fp": 341,
+      "fn": 57,
+      "tp": 317,
+      "total_cost_usd": 94300.0,
+      "avg_cost_per_customer_usd": 66.93
+    }
+  },
+  "roi_benchmark": [
+    {
+      "strategy": "Không can thiệp (Do Nothing)",
+      "targeted_customers": 0,
+      "churn_caught": 0,
+      "churn_missed": 374,
+      "total_cost_usd": 187000.0,
+      "savings_vs_nothing_usd": 0.0,
+      "savings_pct": 0.0
+    },
+    {
+      "strategy": "Ưu đãi đại trà 100% (Blanket)",
+      "targeted_customers": 1409,
+      "churn_caught": 374,
+      "churn_missed": 0,
+      "total_cost_usd": 140900.0,
+      "savings_vs_nothing_usd": 46100.0,
+      "savings_pct": 24.7
+    },
+    {
+      "strategy": "Luật lọc thủ công (Excel)",
+      "targeted_customers": 406,
+      "churn_caught": 209,
+      "churn_missed": 165,
+      "total_cost_usd": 123100.0,
+      "savings_vs_nothing_usd": 63900.0,
+      "savings_pct": 34.2
+    },
+    {
+      "strategy": "LightGBM (T*=0.21)",
+      "targeted_customers": 658,
+      "churn_caught": 317,
+      "churn_missed": 57,
+      "total_cost_usd": 94300.0,
+      "savings_vs_nothing_usd": 92700.0,
+      "savings_pct": 49.6
+    }
+  ],
+  "logistic_odds_ratios": {
+    "top_increase_churn": [
+      {
+        "feature": "InternetService_Fiber optic",
+        "coef": 0.7377,
+        "odds_ratio": 2.0911
+      },
+      {
+        "feature": "Contract_Month-to-month",
+        "coef": 0.669,
+        "odds_ratio": 1.9522
+      },
+      {
+        "feature": "TenureGroup_0-6m",
+        "coef": 0.4374,
+        "odds_ratio": 1.5486
+      },
+      {
+        "feature": "TotalAddonServices",
+        "coef": 0.3378,
+        "odds_ratio": 1.4019
+      },
+      {
+        "feature": "MultipleLines_Yes",
+        "coef": 0.183,
+        "odds_ratio": 1.2008
+      },
+      {
+        "feature": "StreamingMovies_Yes",
+        "coef": 0.1737,
+        "odds_ratio": 1.1898
+      }
+    ],
+    "top_decrease_churn": [
+      {
+        "feature": "Contract_Two year",
+        "coef": -0.8968,
+        "odds_ratio": 0.4079
+      },
+      {
+        "feature": "InternetService_DSL",
+        "coef": -0.723,
+        "odds_ratio": 0.4853
+      },
+      {
+        "feature": "tenure",
+        "coef": -0.71,
+        "odds_ratio": 0.4917
+      },
+      {
+        "feature": "HasProtectionBundle",
+        "coef": -0.3416,
+        "odds_ratio": 0.7106
+      },
+      {
+        "feature": "PaperlessBilling_No",
+        "coef": -0.3351,
+        "odds_ratio": 0.7152
+      },
+      {
+        "feature": "MonthlyCharges",
+        "coef": -0.3326,
+        "odds_ratio": 0.7171
+      }
+    ]
+  },
+  "extracted_cart_rules": [
+    {
+      "conditions": "Contract_Month-to-month > 0.50 AND InternetService_Fiber optic > 0.50 AND tenure <= 13.50",
+      "n_samples": 762,
+      "support_pct": 13.53,
+      "churn_prob_pct": 71.0,
+      "predicted_class": "Churn (Rời bỏ)"
+    },
+    {
+      "conditions": "Contract_Month-to-month > 0.50 AND InternetService_Fiber optic <= 0.50 AND tenure <= 3.50",
+      "n_samples": 468,
+      "support_pct": 8.31,
+      "churn_prob_pct": 43.16,
+      "predicted_class": "Non-Churn (Ở lại)"
+    },
+    {
+      "conditions": "Contract_Month-to-month > 0.50 AND InternetService_Fiber optic > 0.50 AND tenure > 13.50",
+      "n_samples": 945,
+      "support_pct": 16.77,
+      "churn_prob_pct": 42.22,
+      "predicted_class": "Non-Churn (Ở lại)"
+    },
+    {
+      "conditions": "Contract_Month-to-month <= 0.50 AND MonthlyCharges > 93.67 AND Contract_Two year <= 0.50",
+      "n_samples": 325,
+      "support_pct": 5.77,
+      "churn_prob_pct": 21.54,
+      "predicted_class": "Non-Churn (Ở lại)"
+    },
+    {
+      "conditions": "Contract_Month-to-month > 0.50 AND InternetService_Fiber optic <= 0.50 AND tenure > 3.50",
+      "n_samples": 927,
+      "support_pct": 16.45,
+      "churn_prob_pct": 19.85,
+      "predicted_class": "Non-Churn (Ở lại)"
+    },
+    {
+      "conditions": "Contract_Month-to-month <= 0.50 AND MonthlyCharges <= 93.67 AND OnlineSecurity_No > 0.50",
+      "n_samples": 399,
+      "support_pct": 7.08,
+      "churn_prob_pct": 9.77,
+      "predicted_class": "Non-Churn (Ở lại)"
+    },
+    {
+      "conditions": "Contract_Month-to-month <= 0.50 AND MonthlyCharges > 93.67 AND Contract_Two year > 0.50",
+      "n_samples": 303,
+      "support_pct": 5.38,
+      "churn_prob_pct": 7.92,
+      "predicted_class": "Non-Churn (Ở lại)"
+    },
+    {
+      "conditions": "Contract_Month-to-month <= 0.50 AND MonthlyCharges <= 93.67 AND OnlineSecurity_No <= 0.50",
+      "n_samples": 1505,
+      "support_pct": 26.71,
+      "churn_prob_pct": 2.39,
+      "predicted_class": "Non-Churn (Ở lại)"
+    }
+  ],
+  "shap_top12": [
+    {
+      "feature": "Contract_Month-to-month",
+      "mean_abs_shap": 0.6633
+    },
+    {
+      "feature": "tenure",
+      "mean_abs_shap": 0.3568
+    },
+    {
+      "feature": "OnlineSecurity_No",
+      "mean_abs_shap": 0.2378
+    },
+    {
+      "feature": "TechSupport_No",
+      "mean_abs_shap": 0.2006
+    },
+    {
+      "feature": "InternetService_Fiber optic",
+      "mean_abs_shap": 0.1997
+    },
+    {
+      "feature": "PaymentMethod_Electronic check",
+      "mean_abs_shap": 0.1558
+    },
+    {
+      "feature": "Contract_Two year",
+      "mean_abs_shap": 0.1536
+    },
+    {
+      "feature": "MonthlyCharges",
+      "mean_abs_shap": 0.1299
+    },
+    {
+      "feature": "PaperlessBilling_No",
+      "mean_abs_shap": 0.1034
+    },
+    {
+      "feature": "AvgMonthlySpend",
+      "mean_abs_shap": 0.0973
+    },
+    {
+      "feature": "MultipleLines_No",
+      "mean_abs_shap": 0.0768
+    },
+    {
+      "feature": "TotalCharges",
+      "mean_abs_shap": 0.0767
+    }
+  ],
+  "shap_cases": {
+    "high_risk_churn": {
+      "test_pos": 1090,
+      "customer_id": "5178-LMXOP",
+      "actual_churn": 1,
+      "pred_prob_pct": 90.65,
+      "contract": "Month-to-month",
+      "tenure": 1,
+      "monthly_charges": 95.1,
+      "internet": "Fiber optic",
+      "payment": "Electronic check",
+      "top_shap_drivers": [
+        {
+          "feature": "tenure",
+          "shap_value": 0.7772
+        },
+        {
+          "feature": "Contract_Month-to-month",
+          "shap_value": 0.7703
+        },
+        {
+          "feature": "TechSupport_No",
+          "shap_value": 0.2868
+        },
+        {
+          "feature": "TotalCharges",
+          "shap_value": 0.2749
+        },
+        {
+          "feature": "AvgMonthlySpend",
+          "shap_value": 0.2542
+        }
+      ]
+    },
+    "safe_non_churn": {
+      "test_pos": 793,
+      "customer_id": "7606-BPHHN",
+      "actual_churn": 0,
+      "pred_prob_pct": 0.62,
+      "contract": "Two year",
+      "tenure": 72,
+      "monthly_charges": 19.8,
+      "internet": "No",
+      "payment": "Credit card (automatic)",
+      "top_shap_drivers": [
+        {
+          "feature": "tenure",
+          "shap_value": -0.9673
+        },
+        {
+          "feature": "Contract_Month-to-month",
+          "shap_value": -0.6962
+        },
+        {
+          "feature": "Contract_Two year",
+          "shap_value": -0.3033
+        },
+        {
+          "feature": "OnlineSecurity_No",
+          "shap_value": -0.2884
+        },
+        {
+          "feature": "TechSupport_No",
+          "shap_value": -0.2505
+        }
+      ]
+    }
+  },
+  "error_analysis": {
+    "at_default_050": {
+      "threshold": 0.5,
+      "total_test": 1409,
+      "total_errors": 272,
+      "error_rate_pct": 19.3,
+      "fn_count": 181,
+      "fp_count": 91,
+      "boundary_errors": 93,
+      "boundary_share_pct": 34.2,
+      "fn_loyal_silent": 92,
+      "fn_short_volatile": 89,
+      "fp_high_risk_profile": 91,
+      "fp_other": 0
+    },
+    "at_optimal_tstar": {
+      "threshold": 0.21,
+      "total_test": 1409,
+      "total_errors": 398,
+      "error_rate_pct": 28.25,
+      "fn_count": 57,
+      "fp_count": 341,
+      "boundary_errors": 136,
+      "boundary_share_pct": 34.2,
+      "fn_loyal_silent": 41,
+      "fn_short_volatile": 16,
+      "fp_high_risk_profile": 338,
+      "fp_other": 3
+    }
+  },
+  "total_runtime_sec": 36.75
+}
