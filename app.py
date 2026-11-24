@@ -1398,49 +1398,56 @@ def _streamlit_css(is_dark: bool) -> str:
     .stTabs [data-baseweb="tab-highlight"],
     .stTabs [data-baseweb="tab-border"] {{
         display: none !important;
+        height: 0 !important;
+        background: transparent !important;
     }}
     .stTabs [data-baseweb="tab-list"] {{
-        gap: 6px;
-        background-color: {t['surface']};
-        padding: 6px;
-        border-radius: 8px;
-        border: 1px solid {t['border']};
-        margin-bottom: 12px;
+        gap: 8px !important;
+        background-color: {t['surface']} !important;
+        padding: 6px 8px !important;
+        border-radius: 10px !important;
+        border: 1px solid {t['border']} !important;
+        box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04) !important;
+        margin-bottom: 14px !important;
     }}
-    .stTabs [data-baseweb="tab"] {{
-        height: 40px;
-        padding: 0 16px;
-        border-radius: 6px;
-        font-weight: 600;
-        font-size: 13.5px;
+    .stTabs button[data-baseweb="tab"] {{
+        height: 40px !important;
+        padding: 8px 18px !important;
+        border-radius: 7px !important;
+        font-weight: 600 !important;
+        font-size: 13.5px !important;
         color: {t['muted']} !important;
-        border: 1px solid transparent;
-        background-color: transparent;
-        transition: all 0.18s ease;
+        background-color: {t['surface_alt']} !important;
+        border: 1px solid {t['border']} !important;
+        margin: 0 !important;
+        transition: all 0.18s ease !important;
     }}
-    .stTabs [data-baseweb="tab"] p,
-    .stTabs [data-baseweb="tab"] span,
-    .stTabs [data-baseweb="tab"] div {{
+    .stTabs button[data-baseweb="tab"] p,
+    .stTabs button[data-baseweb="tab"] span,
+    .stTabs button[data-baseweb="tab"] div {{
         color: {t['muted']} !important;
     }}
-    .stTabs [data-baseweb="tab"]:hover {{
+    .stTabs button[data-baseweb="tab"]:hover {{
         background-color: {t['accent_soft']} !important;
         color: {t['accent']} !important;
-        border-color: {t['border']} !important;
+        border-color: {t['accent']} !important;
+        transform: translateY(-1px) !important;
     }}
-    .stTabs [data-baseweb="tab"]:hover p,
-    .stTabs [data-baseweb="tab"]:hover span,
-    .stTabs [data-baseweb="tab"]:hover div {{
+    .stTabs button[data-baseweb="tab"]:hover p,
+    .stTabs button[data-baseweb="tab"]:hover span,
+    .stTabs button[data-baseweb="tab"]:hover div {{
         color: {t['accent']} !important;
     }}
-    .stTabs [aria-selected="true"],
-    .stTabs [aria-selected="true"]:hover {{
+    .stTabs button[data-baseweb="tab"][aria-selected="true"],
+    .stTabs button[data-baseweb="tab"][aria-selected="true"]:hover {{
         background-color: {t['accent']} !important;
         color: #FFFFFF !important;
         border-color: {t['accent']} !important;
+        box-shadow: 0 2px 6px rgba(30, 64, 175, 0.25) !important;
+        transform: none !important;
     }}
-    .stTabs [aria-selected="true"] *,
-    .stTabs [aria-selected="true"]:hover * {{
+    .stTabs button[data-baseweb="tab"][aria-selected="true"] *,
+    .stTabs button[data-baseweb="tab"][aria-selected="true"]:hover * {{
         color: #FFFFFF !important;
     }}
     .hero-banner {{
