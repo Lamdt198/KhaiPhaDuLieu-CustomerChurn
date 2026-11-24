@@ -1011,17 +1011,31 @@ def _streamlit_css(is_dark: bool) -> str:
     div[data-testid="stMetric"] label, div[data-testid="stMetricValue"] {{
         color: {t['text']} !important;
     }}
-    .stButton > button {{
-        background-color: {t['surface']};
-        color: {t['text']};
-        border: 1px solid {t['border']};
+    .stButton > button,
+    .stDownloadButton > button {{
+        background-color: {t['surface']} !important;
+        color: {t['text']} !important;
+        border: 1px solid {t['border']} !important;
         border-radius: 6px;
         font-weight: 600;
     }}
-    .stButton > button[kind="primary"] {{
-        background-color: {t['accent']};
-        color: #FFFFFF;
-        border-color: {t['accent']};
+    .stButton > button[kind="primary"],
+    .stDownloadButton > button[kind="primary"] {{
+        background-color: {t['accent']} !important;
+        color: #FFFFFF !important;
+        border-color: {t['accent']} !important;
+    }}
+    section[data-testid="stFileUploaderDropzone"],
+    div[data-testid="stFileUploader"] section {{
+        background-color: {t['surface']} !important;
+        color: {t['text']} !important;
+        border: 1px dashed {t['border']} !important;
+        border-radius: 8px;
+    }}
+    section[data-testid="stFileUploaderDropzone"] button {{
+        background-color: {t['surface_alt']} !important;
+        color: {t['text']} !important;
+        border: 1px solid {t['border']} !important;
     }}
     .hero-banner {{
         background: {t['hero_bg']};
@@ -1154,17 +1168,18 @@ def _streamlit_css(is_dark: bool) -> str:
         background: {t['surface']};
         border: 1px solid {t['border']};
         border-radius: 6px;
-        padding: 10px 8px;
+        padding: 10px 6px;
         text-align: center;
-        min-height: 64px;
+        height: 76px;
         display: flex;
         flex-direction: column;
         justify-content: center;
     }}
     .feat-chip-name {{
-        font-size: 11px;
+        font-size: 10.5px;
         color: {t['muted']} !important;
         font-weight: 600;
+        line-height: 1.25;
         word-break: normal;
         overflow-wrap: break-word;
     }}
