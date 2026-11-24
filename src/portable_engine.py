@@ -9,6 +9,7 @@ import csv
 import io
 import json
 import math
+import random
 from itertools import combinations
 
 ADDON_SERVICE_COLS = [
@@ -451,3 +452,22 @@ def batch_predict_csv(csv_text: str, threshold: float, model_json: dict) -> dict
         "budget_usd": n_intervene * 100,
         "rows": rows_out,
     }
+
+
+def generate_random_sample_csv(raw_csv_path: str, n_rows: int = 100, seed: int = None) -> str:
+    """Trích xuất ngẫu nhiên n_rows khách hàng từ tập dữ liệu gốc (bỏ cột nhãn Churn)."""
+    with open(raw_csv_path, "r", encoding="utf-8-sig") as f:
+        reader = csv.DictReader(f)
+        fieldnames = [c for c in (reader.fieldnames or []) if c != "Churn"]
+        all_rows = list(reader)
+
+    n_take = max(1, min(int(n_rows), len(all_rows)))
+    rng = random.Random(seed)
+    sampled = rng.sample(all_rows, n_take)
+
+    buf = io.StringIO()
+    writer = csv.DictWriter(buf, fieldnames=fieldnames, extrasaction="ignore", lineterminator="\n")
+    writer.writeheader()
+    writer.writerows(sampled)
+    return buf.getvalue()
+

@@ -11,7 +11,7 @@ import json
 import mimetypes
 import os
 import sys
-from urllib.parse import unquote
+from urllib.parse import parse_qs, unquote
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 if BASE_DIR not in sys.path:
@@ -22,6 +22,7 @@ from src.portable_engine import (
     PRESET_PROFILES,
     batch_predict_csv,
     build_recommendations,
+    generate_random_sample_csv,
     load_portable_model,
     predict_and_shap,
 )
@@ -31,6 +32,7 @@ PORTABLE_MODEL_PATH = os.path.join(BASE_DIR, "models", "portable_lgbm_model.json
 RESULTS_PATH = os.path.join(BASE_DIR, "models", "experiment_results.json")
 COMP_CSV_PATH = os.path.join(BASE_DIR, "models", "model_comparison.csv")
 SAMPLE_CSV_PATH = os.path.join(BASE_DIR, "data", "sample_test_customers.csv")
+RAW_CSV_PATH = os.path.join(BASE_DIR, "data", "WA_Fn-UseC_-Telco-Customer-Churn.csv")
 FIG_DIR = os.path.join(BASE_DIR, "reports", "figures")
 
 _WSGI_CACHE = {}
@@ -238,12 +240,79 @@ def _build_wsgi_html(data: dict) -> str:
       font-weight: 600;
       font-size: 13.5px;
       cursor: pointer;
+      transition: all 0.18s ease;
     }}
-    .tab-btn.active {{
+    .tab-btn:hover {{
       background: var(--accent-soft);
       color: var(--accent);
       border-color: var(--border);
     }}
+    .tab-btn.active, .tab-btn.active:hover {{
+      background: var(--accent);
+      color: #FFFFFF;
+      border-color: var(--accent);
+    }}
+    .drop-zone {{
+      border: 2px dashed var(--border);
+      background: var(--surface);
+      border-radius: 8px;
+      padding: 24px 16px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.18s ease;
+      margin-bottom: 12px;
+    }}
+    .drop-zone:hover, .drop-zone.dragover {{
+      border-color: var(--accent);
+      background: var(--accent-soft);
+    }}
+    .sample-toolbar {{
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      background: var(--surface-alt);
+      border: 1px solid var(--border-soft);
+      border-radius: 6px;
+      padding: 8px 12px;
+      margin-bottom: 14px;
+      font-size: 12.5px;
+    }}
+    .btn-sm {{
+      padding: 5px 11px;
+      font-size: 12px;
+    }}
+    .center-loading {{
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.42);
+      backdrop-filter: blur(2px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 99999;
+    }}
+    .center-loading.show {{ display: flex; }}
+    .loading-card {{
+      background: var(--surface);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 20px 28px;
+      text-align: center;
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.28);
+      min-width: 280px;
+    }}
+    .spinner {{
+      width: 28px;
+      height: 28px;
+      border: 3px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      margin: 0 auto 10px;
+      animation: spin 0.75s linear infinite;
+    }}
+    @keyframes spin {{ to {{ transform: rotate(360deg); }} }}
     .tab-pane {{ display: none; }}
     .tab-pane.active {{ display: block; }}
     .btn-row {{
@@ -507,42 +576,62 @@ def _build_wsgi_html(data: dict) -> str:
 
     <!-- TAB 2 -->
     <div id="tab2" class="tab-pane">
+      <div id="csv-dropzone" class="drop-zone" onclick="document.getElementById('csv-upload').click()">
+        <div style="font-weight:700; font-size:14.5px; margin-bottom:4px;">Thêm hoặc kéo thả tệp CSV danh sách khách hàng vào đây (Drag &amp; Drop)</div>
+        <div style="font-size:12.5px; color:var(--muted);">Nhấp chuột để chọn tệp từ máy tính hoặc kéo thả trực tiếp file .csv (hệ thống chỉ tính khi bạn bấm nút bên dưới)</div>
+        <input type="file" id="csv-upload" accept=".csv" style="display:none;" onchange="handleCsvUpload(this)" />
+      </div>
+
+      <div class="sample-toolbar">
+        <span style="font-weight:600; color:var(--muted);">Dữ liệu mẫu ngẫu nhiên:</span>
+        <select id="sample-n" onchange="onSampleOptionChange()" style="padding:5px 8px; border-radius:6px; border:1px solid var(--border); background:var(--surface); color:var(--text);">
+          <option value="100" selected>100 khách hàng</option>
+          <option value="200">200 khách hàng</option>
+          <option value="500">500 khách hàng</option>
+          <option value="1000">1000 khách hàng</option>
+        </select>
+        <button class="btn btn-sm" onclick="randomizeSample()">Đổi mẫu ngẫu nhiên (Random)</button>
+        <a id="btn-dl-sample" class="btn btn-sm" href="/api/sample-csv?n=100&amp;seed=42" download="sample_customers_100.csv" style="text-decoration:none;">Tải tệp CSV mẫu (100 KH)</a>
+      </div>
+
+      <div id="batch-staged-status" class="status-box status-low" style="margin:0 0 12px 0;"></div>
+
       <div class="btn-row">
-        <a class="btn" href="/api/sample-csv" download="sample_test_customers.csv">Tải tệp CSV mẫu (100 KH tập Test)</a>
-        <label class="btn" style="display:inline-block;">
-          Tải lên tệp CSV khác
-          <input type="file" id="csv-upload" accept=".csv" style="display:none;" onchange="handleCsvUpload(this)" />
-        </label>
-        <button class="btn btn-primary" onclick="downloadBatchResult()">Tải xuống kết quả dự đoán (CSV)</button>
+        <button class="btn btn-primary" onclick="runBatchScoring()">Bắt đầu chấm điểm danh sách</button>
+        <button class="btn" onclick="resetBatchSelection()">Xóa kết quả / Chọn lại</button>
+        <button id="btn-dl-result" class="btn" onclick="downloadBatchResult()" style="display:none;">Tải xuống kết quả dự đoán (CSV)</button>
       </div>
-      <div class="kpi-grid" id="batch-kpis"></div>
-      <div class="btn-row" style="align-items:center;">
-        <label>Lọc phân tầng:
-          <select id="filter-tier" onchange="renderBatchTable()" style="padding:6px 10px; border-radius:6px; border:1px solid var(--border); background:var(--surface); color:var(--text);">
-            <option value="ALL">Tất cả phân tầng</option>
-            <option value="high">Nguy cơ cao (&gt;= 50%)</option>
-            <option value="mid">Cảnh báo (T – 50%)</option>
-            <option value="low">Ổn định</option>
-          </select>
-        </label>
-        <label>Lọc hợp đồng:
-          <select id="filter-contract" onchange="renderBatchTable()" style="padding:6px 10px; border-radius:6px; border:1px solid var(--border); background:var(--surface); color:var(--text);">
-            <option value="ALL">Tất cả hợp đồng</option>
-            <option value="Month-to-month">Month-to-month</option>
-            <option value="One year">One year</option>
-            <option value="Two year">Two year</option>
-          </select>
-        </label>
-      </div>
-      <div class="table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>Mã KH</th><th>Hợp đồng</th><th>Internet</th><th>Số tháng</th><th>Cước/tháng</th><th>Xác suất Churn</th><th>Phân tầng rủi ro</th>
-            </tr>
-          </thead>
-          <tbody id="batch-tbody"></tbody>
-        </table>
+
+      <div id="batch-results-area" style="display:none;">
+        <div class="kpi-grid" id="batch-kpis"></div>
+        <div class="btn-row" style="align-items:center;">
+          <label>Lọc phân tầng:
+            <select id="filter-tier" onchange="renderBatchTable()" style="padding:6px 10px; border-radius:6px; border:1px solid var(--border); background:var(--surface); color:var(--text);">
+              <option value="ALL">Tất cả phân tầng</option>
+              <option value="high">Nguy cơ cao (&gt;= 50%)</option>
+              <option value="mid">Cảnh báo (T – 50%)</option>
+              <option value="low">Ổn định</option>
+            </select>
+          </label>
+          <label>Lọc hợp đồng:
+            <select id="filter-contract" onchange="renderBatchTable()" style="padding:6px 10px; border-radius:6px; border:1px solid var(--border); background:var(--surface); color:var(--text);">
+              <option value="ALL">Tất cả hợp đồng</option>
+              <option value="Month-to-month">Month-to-month</option>
+              <option value="One year">One year</option>
+              <option value="Two year">Two year</option>
+            </select>
+          </label>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Mã KH</th><th>Hợp đồng</th><th>Internet</th><th>Số tháng</th><th>Cước/tháng</th><th>Xác suất Churn</th><th>Phân tầng rủi ro</th>
+              </tr>
+            </thead>
+            <tbody id="batch-tbody"></tbody>
+          </table>
+        </div>
       </div>
     </div>
 
@@ -558,6 +647,13 @@ def _build_wsgi_html(data: dict) -> str:
       <div id="sub2" class="sub-pane" style="display:none;"></div>
       <div id="sub3" class="sub-pane" style="display:none;"></div>
       <div id="sub4" class="sub-pane" style="display:none;"></div>
+    </div>
+  </div>
+
+  <div id="center-loading" class="center-loading">
+    <div class="loading-card">
+      <div class="spinner"></div>
+      <div id="loading-msg" style="font-weight:600; font-size:13.5px;">Đang xử lý dữ liệu...</div>
     </div>
   </div>
 
@@ -611,18 +707,34 @@ def _build_wsgi_html(data: dict) -> str:
       `;
     }}
 
-    function setThr(val) {{
+    function showLoading(msg) {{
+      document.getElementById("loading-msg").textContent = msg || "Đang xử lý dữ liệu...";
+      document.getElementById("center-loading").classList.add("show");
+    }}
+    function hideLoading() {{
+      document.getElementById("center-loading").classList.remove("show");
+    }}
+
+    async function setThr(val) {{
       document.getElementById("thr-slider").value = val.toFixed(2);
       document.getElementById("thr-val").textContent = val.toFixed(2);
-      runPredict();
-      loadBatch(null);
+      showLoading("Đang cập nhật ngưỡng phân loại T = " + val.toFixed(2) + "...");
+      await runPredict();
+      if (hasScoredBatch) await runBatchScoring(false);
+      setTimeout(hideLoading, 200);
     }}
     document.getElementById("thr-slider").addEventListener("input", (e) => {{
       const v = parseFloat(e.target.value);
       document.getElementById("thr-val").textContent = v.toFixed(2);
       runPredict();
     }});
-    document.getElementById("thr-slider").addEventListener("change", () => loadBatch(null));
+    document.getElementById("thr-slider").addEventListener("change", async (e) => {{
+      const v = parseFloat(e.target.value);
+      showLoading("Đang cập nhật ngưỡng phân loại T = " + v.toFixed(2) + "...");
+      await runPredict();
+      if (hasScoredBatch) await runBatchScoring(false);
+      setTimeout(hideLoading, 200);
+    }});
 
     function applyPreset(key) {{
       const p = BOOT.presets[key];
@@ -722,23 +834,86 @@ def _build_wsgi_html(data: dict) -> str:
     }}
 
     let lastCsvText = null;
-    async function loadBatch(csvText) {{
-      if (csvText !== null) lastCsvText = csvText;
+    let uploadedFileName = "";
+    let sampleSeed = 42;
+    let hasScoredBatch = false;
+
+    function updateStagedBanner() {{
+      const n = document.getElementById("sample-n").value;
+      const dl = document.getElementById("btn-dl-sample");
+      dl.href = `/api/sample-csv?n=${{n}}&seed=${{sampleSeed}}`;
+      dl.download = `sample_customers_${{n}}.csv`;
+      dl.textContent = `Tải tệp CSV mẫu (${{n}} KH)`;
+
+      const box = document.getElementById("batch-staged-status");
+      if (lastCsvText !== null) {{
+        const lineCount = Math.max(0, lastCsvText.trim().split(/\\r?\\n/).length - 1);
+        box.innerHTML = `<strong>Đã nạp tệp:</strong> ${{uploadedFileName}} (${{lineCount}} dòng). Bấm nút <b>"Bắt đầu chấm điểm danh sách"</b> để chạy mô hình.`;
+      }} else {{
+        box.innerHTML = `<strong>Dữ liệu đang chọn:</strong> Bộ mẫu ngẫu nhiên <b>${{n}} khách hàng</b> (Seed #${{sampleSeed}}). Bấm nút <b>"Bắt đầu chấm điểm danh sách"</b> để chạy mô hình.`;
+      }}
+    }}
+
+    function clearBatchResults() {{
+      hasScoredBatch = false;
+      currentBatch = [];
+      document.getElementById("batch-results-area").style.display = "none";
+      document.getElementById("btn-dl-result").style.display = "none";
+      updateStagedBanner();
+    }}
+
+    function onSampleOptionChange() {{
+      lastCsvText = null;
+      uploadedFileName = "";
+      document.getElementById("csv-upload").value = "";
+      clearBatchResults();
+    }}
+
+    function randomizeSample() {{
+      sampleSeed = Math.floor(Math.random() * 90000) + 1000;
+      lastCsvText = null;
+      uploadedFileName = "";
+      document.getElementById("csv-upload").value = "";
+      clearBatchResults();
+    }}
+
+    function resetBatchSelection() {{
+      lastCsvText = null;
+      uploadedFileName = "";
+      document.getElementById("csv-upload").value = "";
+      clearBatchResults();
+    }}
+
+    async function runBatchScoring(withSpinner = true) {{
       const thr = parseFloat(document.getElementById("thr-slider").value);
-      const res = await fetch("/api/batch", {{
-        method: "POST",
-        headers: {{ "Content-Type": "application/json" }},
-        body: JSON.stringify({{ threshold: thr, csv_text: lastCsvText }})
-      }});
-      const data = await res.json();
-      currentBatch = data.rows || [];
-      document.getElementById("batch-kpis").innerHTML = `
-        <div class="kpi-card"><div class="kpi-label">Tổng số khách hàng</div><div class="kpi-val">${{data.total}}</div></div>
-        <div class="kpi-card"><div class="kpi-label">Cần can thiệp (&gt;= ${{thr.toFixed(2)}})</div><div class="kpi-val">${{data.n_intervene}}</div><div class="kpi-sub">${{data.intervene_pct}}% danh sách</div></div>
-        <div class="kpi-card"><div class="kpi-label">Nguy cơ cao (&gt;= 0.50)</div><div class="kpi-val">${{data.n_high_50}}</div></div>
-        <div class="kpi-card"><div class="kpi-label">Ngân sách ưu đãi dự kiến</div><div class="kpi-val">$${{data.budget_usd.toLocaleString()}}</div><div class="kpi-sub">100 USD / KH can thiệp</div></div>
-      `;
-      renderBatchTable();
+      const sampleN = parseInt(document.getElementById("sample-n").value, 10);
+      if (withSpinner) showLoading("Đang chạy mô hình LightGBM chấm điểm danh sách...");
+      try {{
+        const res = await fetch("/api/batch", {{
+          method: "POST",
+          headers: {{ "Content-Type": "application/json" }},
+          body: JSON.stringify({{
+            threshold: thr,
+            csv_text: lastCsvText,
+            sample_n: sampleN,
+            sample_seed: sampleSeed
+          }})
+        }});
+        const data = await res.json();
+        currentBatch = data.rows || [];
+        hasScoredBatch = true;
+        document.getElementById("batch-results-area").style.display = "block";
+        document.getElementById("btn-dl-result").style.display = "inline-block";
+        document.getElementById("batch-kpis").innerHTML = `
+          <div class="kpi-card"><div class="kpi-label">Tổng số khách hàng</div><div class="kpi-val">${{data.total}}</div></div>
+          <div class="kpi-card"><div class="kpi-label">Cần can thiệp (&gt;= ${{thr.toFixed(2)}})</div><div class="kpi-val">${{data.n_intervene}}</div><div class="kpi-sub">${{data.intervene_pct}}% danh sách</div></div>
+          <div class="kpi-card"><div class="kpi-label">Nguy cơ cao (&gt;= 0.50)</div><div class="kpi-val">${{data.n_high_50}}</div></div>
+          <div class="kpi-card"><div class="kpi-label">Ngân sách ưu đãi dự kiến</div><div class="kpi-val">$${{data.budget_usd.toLocaleString()}}</div><div class="kpi-sub">100 USD / KH can thiệp</div></div>
+        `;
+        renderBatchTable();
+      }} finally {{
+        if (withSpinner) setTimeout(hideLoading, 180);
+      }}
     }}
 
     function renderBatchTable() {{
@@ -758,13 +933,37 @@ def _build_wsgi_html(data: dict) -> str:
       `).join("");
     }}
 
-    function handleCsvUpload(input) {{
-      const file = input.files[0];
+    function readCsvFile(file) {{
       if (!file) return;
       const reader = new FileReader();
-      reader.onload = () => loadBatch(reader.result);
+      reader.onload = () => {{
+        lastCsvText = reader.result;
+        uploadedFileName = file.name;
+        clearBatchResults();
+      }};
       reader.readAsText(file, "utf-8");
     }}
+
+    function handleCsvUpload(input) {{
+      readCsvFile(input.files[0]);
+    }}
+
+    (function initDropZone() {{
+      const dz = document.getElementById("csv-dropzone");
+      if (!dz) return;
+      dz.addEventListener("dragover", (e) => {{
+        e.preventDefault();
+        dz.classList.add("dragover");
+      }});
+      dz.addEventListener("dragleave", () => dz.classList.remove("dragover"));
+      dz.addEventListener("drop", (e) => {{
+        e.preventDefault();
+        dz.classList.remove("dragover");
+        if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0]) {{
+          readCsvFile(e.dataTransfer.files[0]);
+        }}
+      }});
+    }})();
 
     function downloadBatchResult() {{
       if (!currentBatch.length) return;
@@ -824,7 +1023,7 @@ def _build_wsgi_html(data: dict) -> str:
 
     renderKpis();
     applyPreset("high");
-    loadBatch(null);
+    updateStagedBanner();
     renderExperiments();
   </script>
 </body>
@@ -857,7 +1056,15 @@ def app(environ, start_response):
         return _wsgi_response(start_response, "200 OK", "application/json; charset=utf-8", body)
 
     if method == "GET" and path == "/api/sample-csv":
-        return _wsgi_response(start_response, "200 OK", "text/csv; charset=utf-8", data["sample_csv"].encode("utf-8-sig"))
+        qs = parse_qs(environ.get("QUERY_STRING", ""))
+        n_rows = int(qs.get("n", ["100"])[0])
+        seed_raw = qs.get("seed", [None])[0]
+        seed_val = int(seed_raw) if seed_raw is not None else None
+        if os.path.isfile(RAW_CSV_PATH):
+            csv_body = generate_random_sample_csv(RAW_CSV_PATH, n_rows=n_rows, seed=seed_val)
+        else:
+            csv_body = data["sample_csv"]
+        return _wsgi_response(start_response, "200 OK", "text/csv; charset=utf-8", csv_body.encode("utf-8-sig"))
 
     if method == "GET" and path.startswith("/figures/"):
         fname = os.path.basename(path)
@@ -886,7 +1093,14 @@ def app(environ, start_response):
             length = int(environ.get("CONTENT_LENGTH") or 0)
             payload = json.loads(environ["wsgi.input"].read(length).decode("utf-8") or "{}")
             threshold = float(payload.get("threshold", data["model"]["optimal_threshold"]))
-            csv_text = payload.get("csv_text") or data["sample_csv"]
+            csv_text = payload.get("csv_text")
+            if not csv_text:
+                sample_n = int(payload.get("sample_n", 100))
+                sample_seed = payload.get("sample_seed", 42)
+                if os.path.isfile(RAW_CSV_PATH):
+                    csv_text = generate_random_sample_csv(RAW_CSV_PATH, n_rows=sample_n, seed=sample_seed)
+                else:
+                    csv_text = data["sample_csv"]
             res = batch_predict_csv(csv_text, threshold, data["model"])
             body = json.dumps(res, ensure_ascii=False).encode("utf-8")
             return _wsgi_response(start_response, "200 OK", "application/json; charset=utf-8", body)
@@ -921,8 +1135,9 @@ def _streamlit_css(is_dark: bool) -> str:
             "border": "#334155",
             "text": "#F1F5F9",
             "muted": "#94A3B8",
-            "accent": "#3B82F6",
-            "accent_soft": "#172554",
+            "accent": "#2563EB",
+            "accent_hover": "#3B82F6",
+            "accent_soft": "#1E293B",
             "hero_bg": "#0F172A",
             "hero_sub": "#94A3B8",
             "danger": "#EF4444",
@@ -944,10 +1159,11 @@ def _streamlit_css(is_dark: bool) -> str:
             "sidebar": "#FFFFFF",
             "surface": "#FFFFFF",
             "surface_alt": "#F1F5F9",
-            "border": "#E2E8F0",
+            "border": "#CBD5E1",
             "text": "#0F172A",
             "muted": "#475569",
             "accent": "#1E40AF",
+            "accent_hover": "#1D4ED8",
             "accent_soft": "#EFF6FF",
             "hero_bg": "#0F2544",
             "hero_sub": "#CBD5E1",
@@ -971,9 +1187,13 @@ def _streamlit_css(is_dark: bool) -> str:
         background-color: {t['bg']};
         color: {t['text']};
     }}
-    .stApp h1, .stApp h2, .stApp h3, .stApp h4, .stApp h5, .stApp p, .stApp label,
-    .stApp span, .stApp div {{
-        color: inherit;
+    .stMarkdown h1, .stMarkdown h2, .stMarkdown h3, .stMarkdown h4, .stMarkdown h5,
+    .stMarkdown p, .stMarkdown li, label[data-testid="stWidgetLabel"] p,
+    div[data-testid="stCaptionContainer"] p,
+    div[data-testid="stRadio"] label p,
+    div[data-testid="stRadio"] label div,
+    div[data-testid="stAlert"] p {{
+        color: {t['text']} !important;
     }}
     section[data-testid="stSidebar"] {{
         background-color: {t['sidebar']};
@@ -997,6 +1217,11 @@ def _streamlit_css(is_dark: bool) -> str:
         color: {t['text']} !important;
         border-color: {t['border']} !important;
     }}
+    div[data-baseweb="select"] span,
+    div[data-baseweb="select"] svg {{
+        color: {t['text']} !important;
+        fill: {t['text']} !important;
+    }}
     div[data-testid="stVerticalBlockBorderWrapper"] {{
         background-color: {t['surface']};
         border-color: {t['border']} !important;
@@ -1008,34 +1233,197 @@ def _streamlit_css(is_dark: bool) -> str:
         border-radius: 8px;
         padding: 12px 14px;
     }}
-    div[data-testid="stMetric"] label, div[data-testid="stMetricValue"] {{
+    div[data-testid="stMetric"] label,
+    div[data-testid="stMetric"] label p,
+    div[data-testid="stMetricValue"],
+    div[data-testid="stMetricValue"] div {{
         color: {t['text']} !important;
     }}
-    .stButton > button,
-    .stDownloadButton > button {{
-        background-color: {t['surface']} !important;
-        color: {t['text']} !important;
-        border: 1px solid {t['border']} !important;
-        border-radius: 6px;
-        font-weight: 600;
-    }}
+
+    /* Explicit Primary & Secondary Button Contrast (Light + Dark) */
+    button[kind="primary"],
+    button[data-testid="stBaseButton-primary"],
     .stButton > button[kind="primary"],
     .stDownloadButton > button[kind="primary"] {{
         background-color: {t['accent']} !important;
+        border: 1px solid {t['accent']} !important;
         color: #FFFFFF !important;
-        border-color: {t['accent']} !important;
+        border-radius: 6px !important;
+        font-weight: 600 !important;
+        transition: all 0.16s ease;
     }}
+    button[kind="primary"] *,
+    button[data-testid="stBaseButton-primary"] *,
+    .stButton > button[kind="primary"] *,
+    .stDownloadButton > button[kind="primary"] * {{
+        color: #FFFFFF !important;
+    }}
+    button[kind="primary"]:hover,
+    button[data-testid="stBaseButton-primary"]:hover,
+    .stButton > button[kind="primary"]:hover {{
+        background-color: {t['accent_hover']} !important;
+        border-color: {t['accent_hover']} !important;
+    }}
+
+    button[kind="secondary"],
+    button[data-testid="stBaseButton-secondary"],
+    .stButton > button[kind="secondary"],
+    .stDownloadButton > button {{
+        background-color: {t['surface']} !important;
+        border: 1px solid {t['border']} !important;
+        color: {t['text']} !important;
+        border-radius: 6px !important;
+        font-weight: 600 !important;
+        transition: all 0.16s ease;
+    }}
+    button[kind="secondary"] *,
+    button[data-testid="stBaseButton-secondary"] *,
+    .stButton > button[kind="secondary"] *,
+    .stDownloadButton > button * {{
+        color: {t['text']} !important;
+    }}
+    button[kind="secondary"]:hover,
+    button[data-testid="stBaseButton-secondary"]:hover,
+    .stButton > button[kind="secondary"]:hover,
+    .stDownloadButton > button:hover {{
+        background-color: {t['accent_soft']} !important;
+        border-color: {t['accent']} !important;
+        color: {t['accent']} !important;
+    }}
+    button[kind="secondary"]:hover *,
+    button[data-testid="stBaseButton-secondary"]:hover *,
+    .stButton > button[kind="secondary"]:hover *,
+    .stDownloadButton > button:hover * {{
+        color: {t['accent']} !important;
+    }}
+
+    /* Drag & Drop File Uploader */
     section[data-testid="stFileUploaderDropzone"],
     div[data-testid="stFileUploader"] section {{
         background-color: {t['surface']} !important;
         color: {t['text']} !important;
-        border: 1px dashed {t['border']} !important;
-        border-radius: 8px;
+        border: 2px dashed {t['border']} !important;
+        border-radius: 8px !important;
+        padding: 18px 16px !important;
+        transition: all 0.18s ease;
+    }}
+    section[data-testid="stFileUploaderDropzone"]:hover,
+    div[data-testid="stFileUploader"] section:hover {{
+        border-color: {t['accent']} !important;
+        background-color: {t['accent_soft']} !important;
+    }}
+    section[data-testid="stFileUploaderDropzone"] *,
+    div[data-testid="stFileUploader"] section * {{
+        color: {t['text']} !important;
     }}
     section[data-testid="stFileUploaderDropzone"] button {{
         background-color: {t['surface_alt']} !important;
         color: {t['text']} !important;
         border: 1px solid {t['border']} !important;
+    }}
+
+    /* Center-Screen Loading (both Streamlit status widget & explicit overlay) */
+    div[data-testid="stStatusWidget"]:has(button) {{
+        position: fixed !important;
+        inset: 0 !important;
+        width: 100vw !important;
+        height: 100vh !important;
+        background: rgba(15, 23, 42, 0.36) !important;
+        backdrop-filter: blur(2px) !important;
+        z-index: 999998 !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+    }}
+    div[data-testid="stStatusWidget"]:has(button) > div {{
+        background: {t['surface']} !important;
+        color: {t['text']} !important;
+        border: 1px solid {t['border']} !important;
+        border-radius: 10px !important;
+        padding: 16px 24px !important;
+        box-shadow: 0 12px 32px rgba(0, 0, 0, 0.25) !important;
+    }}
+    .center-loading-overlay {{
+        position: fixed;
+        inset: 0;
+        width: 100vw;
+        height: 100vh;
+        background: rgba(15, 23, 42, 0.40);
+        backdrop-filter: blur(2px);
+        z-index: 999999;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }}
+    .center-loading-card {{
+        background: {t['surface']};
+        color: {t['text']};
+        border: 1px solid {t['border']};
+        border-radius: 10px;
+        padding: 20px 28px;
+        text-align: center;
+        box-shadow: 0 12px 32px rgba(0, 0, 0, 0.28);
+        min-width: 280px;
+    }}
+    .center-spinner {{
+        width: 28px;
+        height: 28px;
+        border: 3px solid {t['border']};
+        border-top-color: {t['accent']};
+        border-radius: 50%;
+        margin: 0 auto 10px auto;
+        animation: stspin 0.75s linear infinite;
+    }}
+    @keyframes stspin {{ to {{ transform: rotate(360deg); }} }}
+
+    /* Tabs Hover & Active States */
+    .stTabs [data-baseweb="tab-highlight"],
+    .stTabs [data-baseweb="tab-border"] {{
+        display: none !important;
+    }}
+    .stTabs [data-baseweb="tab-list"] {{
+        gap: 6px;
+        background-color: {t['surface']};
+        padding: 6px;
+        border-radius: 8px;
+        border: 1px solid {t['border']};
+        margin-bottom: 12px;
+    }}
+    .stTabs [data-baseweb="tab"] {{
+        height: 40px;
+        padding: 0 16px;
+        border-radius: 6px;
+        font-weight: 600;
+        font-size: 13.5px;
+        color: {t['muted']} !important;
+        border: 1px solid transparent;
+        background-color: transparent;
+        transition: all 0.18s ease;
+    }}
+    .stTabs [data-baseweb="tab"] p,
+    .stTabs [data-baseweb="tab"] span,
+    .stTabs [data-baseweb="tab"] div {{
+        color: {t['muted']} !important;
+    }}
+    .stTabs [data-baseweb="tab"]:hover {{
+        background-color: {t['accent_soft']} !important;
+        color: {t['accent']} !important;
+        border-color: {t['border']} !important;
+    }}
+    .stTabs [data-baseweb="tab"]:hover p,
+    .stTabs [data-baseweb="tab"]:hover span,
+    .stTabs [data-baseweb="tab"]:hover div {{
+        color: {t['accent']} !important;
+    }}
+    .stTabs [aria-selected="true"],
+    .stTabs [aria-selected="true"]:hover {{
+        background-color: {t['accent']} !important;
+        color: #FFFFFF !important;
+        border-color: {t['accent']} !important;
+    }}
+    .stTabs [aria-selected="true"] *,
+    .stTabs [aria-selected="true"]:hover * {{
+        color: #FFFFFF !important;
     }}
     .hero-banner {{
         background: {t['hero_bg']};
@@ -1085,27 +1473,6 @@ def _streamlit_css(is_dark: bool) -> str:
         font-size: 12px;
         color: {t['muted']} !important;
         margin-top: 5px;
-    }}
-    .stTabs [data-baseweb="tab-list"] {{
-        gap: 6px;
-        background-color: {t['surface']};
-        padding: 6px;
-        border-radius: 8px;
-        border: 1px solid {t['border']};
-        margin-bottom: 10px;
-    }}
-    .stTabs [data-baseweb="tab"] {{
-        height: 40px;
-        padding: 0 16px;
-        border-radius: 6px;
-        font-weight: 600;
-        font-size: 13.5px;
-        color: {t['muted']};
-    }}
-    .stTabs [aria-selected="true"] {{
-        background-color: {t['accent_soft']} !important;
-        color: {t['accent']} !important;
-        border: 1px solid {t['border']};
     }}
     .risk-box {{
         padding: 14px 16px;
@@ -1213,6 +1580,8 @@ def _streamlit_css(is_dark: bool) -> str:
 
 
 def run_streamlit_app():
+    import io
+    import time
     import joblib
     import numpy as np
     import pandas as pd
@@ -1270,6 +1639,31 @@ def run_streamlit_app():
 
     def set_threshold(val: float):
         st.session_state["threshold_slider"] = float(val)
+
+    def show_center_loading(message: str, duration_sec: float = 0.35):
+        ph = st.empty()
+        ph.markdown(
+            f"""
+            <div class="center-loading-overlay">
+                <div class="center-loading-card">
+                    <div class="center-spinner"></div>
+                    <div style="font-weight:600; font-size:13.5px;">{message}</div>
+                </div>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
+        time.sleep(duration_sec)
+        ph.empty()
+
+    @st.cache_data
+    def load_random_sample_csv(n_rows: int, seed: int) -> str:
+        if os.path.exists(RAW_CSV_PATH):
+            return generate_random_sample_csv(RAW_CSV_PATH, n_rows=n_rows, seed=seed)
+        if os.path.exists(SAMPLE_CSV_PATH):
+            with open(SAMPLE_CSV_PATH, "r", encoding="utf-8-sig") as f:
+                return f.read()
+        return ""
 
     @st.cache_resource
     def load_artifacts():
@@ -1551,6 +1945,12 @@ def run_streamlit_app():
             f"(thực nghiệm OOF: T* = {opt_thr:.2f})."
         )
 
+    if "last_threshold" not in st.session_state:
+        st.session_state["last_threshold"] = float(threshold)
+    elif abs(float(st.session_state["last_threshold"]) - float(threshold)) > 1e-9:
+        st.session_state["last_threshold"] = float(threshold)
+        show_center_loading(f"Đang cập nhật ngưỡng phân loại T = {threshold:.2f} và tính toán lại...", 0.35)
+
     # ==================== MAIN TABS ====================
     tab1, tab2, tab3 = st.tabs([
         "1. Dự đoán khách hàng cá nhân",
@@ -1745,115 +2145,214 @@ def run_streamlit_app():
     # ==================== TAB 2 ====================
     with tab2:
         st.markdown("#### Chấm điểm rủi ro hàng loạt & Phân tầng giữ chân khách hàng")
-        col_dl, col_up = st.columns([1.0, 2.0])
-        with col_dl:
-            if os.path.exists(SAMPLE_CSV_PATH):
-                with open(SAMPLE_CSV_PATH, "rb") as f_sample:
-                    st.download_button(
-                        "Tải tệp CSV mẫu (100 KH tập Test)",
-                        data=f_sample.read(),
-                        file_name="sample_test_customers.csv",
-                        mime="text/csv",
-                        width="stretch",
-                    )
-        with col_up:
-            uploaded = st.file_uploader(
-                "Tải lên tệp CSV khách hàng (hoặc xem kết quả chạy sẵn trên 100 KH tập Test bên dưới)",
-                type=["csv"],
+
+        if "sample_n" not in st.session_state:
+            st.session_state["sample_n"] = 100
+        if "sample_seed" not in st.session_state:
+            st.session_state["sample_seed"] = 42
+        if "uploader_key" not in st.session_state:
+            st.session_state["uploader_key"] = 0
+        if "batch_scored_raw" not in st.session_state:
+            st.session_state["batch_scored_raw"] = None
+        if "batch_scored_probs" not in st.session_state:
+            st.session_state["batch_scored_probs"] = None
+        if "batch_scored_sig" not in st.session_state:
+            st.session_state["batch_scored_sig"] = ""
+        if "batch_scored_source" not in st.session_state:
+            st.session_state["batch_scored_source"] = ""
+
+        # Khu vực Drag & Drop
+        uploaded = st.file_uploader(
+            "Thêm hoặc kéo thả tệp CSV danh sách khách hàng vào đây (Drag & Drop)",
+            type=["csv"],
+            key=f"csv_uploader_{st.session_state['uploader_key']}",
+            help="Hỗ trợ kéo thả file .csv. Sau khi chọn tệp, bấm nút 'Bắt đầu chấm điểm danh sách' bên dưới để chạy mô hình.",
+        )
+
+        # Thanh chọn dữ liệu mẫu ngẫu nhiên & tải xuống nhỏ gọn bên dưới khung Upload
+        sc1, sc2, sc3 = st.columns([1.15, 1.35, 1.35])
+        with sc1:
+            sample_n = st.selectbox(
+                "Kích thước mẫu ngẫu nhiên (KH)",
+                [100, 200, 500, 1000],
+                key="sample_n",
+            )
+        sample_csv_str = load_random_sample_csv(sample_n, st.session_state["sample_seed"])
+        with sc2:
+            st.markdown("<div style='height: 27px;'></div>", unsafe_allow_html=True)
+            if st.button("Đổi mẫu ngẫu nhiên (Random)", width="stretch", key="btn_random_sample"):
+                st.session_state["sample_seed"] = int(st.session_state["sample_seed"]) + 1
+                st.session_state["batch_scored_raw"] = None
+                st.session_state["batch_scored_probs"] = None
+                st.session_state["batch_scored_sig"] = ""
+                st.rerun()
+        with sc3:
+            st.markdown("<div style='height: 27px;'></div>", unsafe_allow_html=True)
+            st.download_button(
+                f"Tải tệp CSV mẫu ({sample_n} KH)",
+                data=sample_csv_str.encode("utf-8-sig"),
+                file_name=f"sample_customers_{sample_n}_random.csv",
+                mime="text/csv",
+                width="stretch",
+                key="btn_dl_sample_csv",
             )
 
-        raw_batch = None
-        source_label = ""
+        # Chuẩn bị dữ liệu đang chờ tính (CHƯA tự động chấm điểm khi mới upload/chọn mẫu)
+        staged_df = None
+        staged_sig = ""
+        staged_source = ""
         if uploaded is not None:
             try:
-                raw_batch = pd.read_csv(uploaded)
-                source_label = f"Tệp tải lên: **{uploaded.name}** ({len(raw_batch):,} khách hàng)"
+                file_bytes = uploaded.getvalue()
+                staged_df = pd.read_csv(io.BytesIO(file_bytes))
+                staged_sig = f"upload:{uploaded.name}:{len(file_bytes)}"
+                staged_source = f"Tệp tải lên: **{uploaded.name}** ({len(staged_df):,} khách hàng)"
             except Exception as exc:
                 st.error(f"Không thể đọc tệp CSV: {exc}")
-        elif os.path.exists(SAMPLE_CSV_PATH):
-            raw_batch = pd.read_csv(SAMPLE_CSV_PATH)
-            source_label = f"Dữ liệu nạp sẵn: **sample_test_customers.csv** ({len(raw_batch):,} khách hàng tập Test)"
+        elif sample_csv_str:
+            staged_df = pd.read_csv(io.StringIO(sample_csv_str))
+            staged_sig = f"sample:{sample_n}:{st.session_state['sample_seed']}"
+            staged_source = (
+                f"Dữ liệu mẫu ngẫu nhiên: **{sample_n} khách hàng** "
+                f"(Seed #{st.session_state['sample_seed']})"
+            )
 
-        if raw_batch is not None:
+        # Nếu người dùng vừa đổi tệp hoặc đổi kích thước/seed mẫu, xóa kết quả cũ để chờ bấm nút
+        if staged_sig and st.session_state["batch_scored_sig"] and st.session_state["batch_scored_sig"] != staged_sig:
+            st.session_state["batch_scored_raw"] = None
+            st.session_state["batch_scored_probs"] = None
+            st.session_state["batch_scored_sig"] = ""
+
+        if staged_df is not None:
+            if st.session_state["batch_scored_probs"] is None:
+                st.info(
+                    f"Đã sẵn sàng nguồn dữ liệu — {staged_source}. "
+                    f"Bấm nút **\"Bắt đầu chấm điểm danh sách\"** để chạy mô hình dự đoán."
+                )
+            else:
+                st.success(
+                    f"Đã hoàn tất chấm điểm — {st.session_state['batch_scored_source']} | "
+                    f"Ngưỡng phân loại: **T = {threshold:.2f}**"
+                )
+
+        act1, act2, _ = st.columns([1.4, 1.0, 1.4])
+        with act1:
+            run_batch_btn = st.button(
+                "Bắt đầu chấm điểm danh sách",
+                type="primary",
+                width="stretch",
+                key="btn_run_batch",
+                disabled=(staged_df is None),
+            )
+        with act2:
+            reset_batch_btn = st.button(
+                "Xóa kết quả / Chọn lại",
+                type="secondary",
+                width="stretch",
+                key="btn_reset_batch",
+            )
+
+        if reset_batch_btn:
+            st.session_state["batch_scored_raw"] = None
+            st.session_state["batch_scored_probs"] = None
+            st.session_state["batch_scored_sig"] = ""
+            st.session_state["batch_scored_source"] = ""
+            st.session_state["uploader_key"] += 1
+            st.rerun()
+
+        if run_batch_btn and staged_df is not None:
             try:
-                st.info(f"Đang chấm điểm nguồn: {source_label} | Ngưỡng phân loại: **T = {threshold:.2f}**")
-                ids = raw_batch["customerID"] if "customerID" in raw_batch.columns else pd.Series(range(1, len(raw_batch) + 1))
-                proc_batch = add_domain_features(raw_batch)
+                show_center_loading(
+                    f"Đang chạy mô hình LightGBM chấm điểm {len(staged_df):,} khách hàng...",
+                    0.35,
+                )
+                proc_batch = add_domain_features(staged_df)
                 probs = best_pipe.predict_proba(proc_batch[feature_cols])[:, 1]
-
-                tiers = np.where(
-                    probs >= 0.50,
-                    "Nguy cơ cao (>=50%)",
-                    np.where(probs >= threshold, f"Cảnh báo ({threshold*100:.0f}%–50%)", "Ổn định"),
-                )
-
-                out_df = pd.DataFrame({
-                    "customerID": ids,
-                    "Contract": raw_batch["Contract"],
-                    "InternetService": raw_batch["InternetService"],
-                    "tenure": proc_batch["tenure"],
-                    "MonthlyCharges": np.round(proc_batch["MonthlyCharges"], 2),
-                    "Xac_suat_Churn_Pct": np.round(probs * 100, 2),
-                    "Phan_tang_rui_ro": tiers,
-                }).sort_values("Xac_suat_Churn_Pct", ascending=False)
-
-                n_high = int((probs >= threshold).sum())
-                n_very_high = int((probs >= 0.50).sum())
-                est_campaign_cost = n_high * 100
-
-                m1, m2, m3, m4 = st.columns(4)
-                m1.metric("Tổng số khách hàng", f"{len(out_df):,}")
-                m2.metric(f"KH cần can thiệp (>= {threshold:.2f})", f"{n_high:,}", f"{n_high/len(out_df)*100:.1f}%")
-                m3.metric("KH nguy cơ cao (>= 0.50)", f"{n_very_high:,}")
-                m4.metric("Ngân sách dự kiến", f"${est_campaign_cost:,}", "100 USD / KH can thiệp")
-
-                with st.container(border=True):
-                    fig_batch = plot_batch_distribution(probs, threshold, is_dark)
-                    st.pyplot(fig_batch, width="stretch")
-                    plt.close(fig_batch)
-
-                f_col1, f_col2 = st.columns(2)
-                with f_col1:
-                    sel_tiers = st.multiselect(
-                        "Lọc theo Phân tầng rủi ro",
-                        options=list(out_df["Phan_tang_rui_ro"].unique()),
-                        default=list(out_df["Phan_tang_rui_ro"].unique()),
-                    )
-                with f_col2:
-                    sel_contracts = st.multiselect(
-                        "Lọc theo Loại hợp đồng",
-                        options=list(out_df["Contract"].unique()),
-                        default=list(out_df["Contract"].unique()),
-                    )
-
-                filtered_df = out_df[
-                    out_df["Phan_tang_rui_ro"].isin(sel_tiers)
-                    & out_df["Contract"].isin(sel_contracts)
-                ]
-
-                st.dataframe(
-                    filtered_df,
-                    width="stretch",
-                    height=380,
-                    hide_index=True,
-                    column_config={
-                        "Xac_suat_Churn_Pct": st.column_config.ProgressColumn(
-                            "Xác suất Churn (%)",
-                            format="%.2f%%",
-                            min_value=0,
-                            max_value=100,
-                        ),
-                        "MonthlyCharges": st.column_config.NumberColumn("Cước tháng (USD)", format="$%.2f"),
-                    },
-                )
-                st.download_button(
-                    "Tải xuống kết quả dự đoán (CSV)",
-                    data=filtered_df.to_csv(index=False).encode("utf-8-sig"),
-                    file_name="churn_batch_predictions.csv",
-                    mime="text/csv",
-                )
+                st.session_state["batch_scored_raw"] = staged_df
+                st.session_state["batch_scored_probs"] = probs
+                st.session_state["batch_scored_sig"] = staged_sig
+                st.session_state["batch_scored_source"] = staged_source
+                st.rerun()
             except Exception as exc:
                 st.error(f"Tệp CSV không đúng định dạng yêu cầu của Telco Churn: {exc}")
+
+        if st.session_state["batch_scored_probs"] is not None and st.session_state["batch_scored_raw"] is not None:
+            raw_scored = st.session_state["batch_scored_raw"]
+            probs = st.session_state["batch_scored_probs"]
+            ids = raw_scored["customerID"] if "customerID" in raw_scored.columns else pd.Series(range(1, len(raw_scored) + 1))
+            proc_scored = add_domain_features(raw_scored)
+
+            tiers = np.where(
+                probs >= 0.50,
+                "Nguy cơ cao (>=50%)",
+                np.where(probs >= threshold, f"Cảnh báo ({threshold*100:.0f}%–50%)", "Ổn định"),
+            )
+
+            out_df = pd.DataFrame({
+                "customerID": ids,
+                "Contract": raw_scored["Contract"],
+                "InternetService": raw_scored["InternetService"],
+                "tenure": proc_scored["tenure"],
+                "MonthlyCharges": np.round(proc_scored["MonthlyCharges"], 2),
+                "Xac_suat_Churn_Pct": np.round(probs * 100, 2),
+                "Phan_tang_rui_ro": tiers,
+            }).sort_values("Xac_suat_Churn_Pct", ascending=False)
+
+            n_high = int((probs >= threshold).sum())
+            n_very_high = int((probs >= 0.50).sum())
+            est_campaign_cost = n_high * 100
+
+            m1, m2, m3, m4 = st.columns(4)
+            m1.metric("Tổng số khách hàng", f"{len(out_df):,}")
+            m2.metric(f"KH cần can thiệp (>= {threshold:.2f})", f"{n_high:,}", f"{n_high/len(out_df)*100:.1f}%")
+            m3.metric("KH nguy cơ cao (>= 0.50)", f"{n_very_high:,}")
+            m4.metric("Ngân sách dự kiến", f"${est_campaign_cost:,}", "100 USD / KH can thiệp")
+
+            with st.container(border=True):
+                fig_batch = plot_batch_distribution(probs, threshold, is_dark)
+                st.pyplot(fig_batch, width="stretch")
+                plt.close(fig_batch)
+
+            f_col1, f_col2 = st.columns(2)
+            with f_col1:
+                sel_tiers = st.multiselect(
+                    "Lọc theo Phân tầng rủi ro",
+                    options=list(out_df["Phan_tang_rui_ro"].unique()),
+                    default=list(out_df["Phan_tang_rui_ro"].unique()),
+                )
+            with f_col2:
+                sel_contracts = st.multiselect(
+                    "Lọc theo Loại hợp đồng",
+                    options=list(out_df["Contract"].unique()),
+                    default=list(out_df["Contract"].unique()),
+                )
+
+            filtered_df = out_df[
+                out_df["Phan_tang_rui_ro"].isin(sel_tiers)
+                & out_df["Contract"].isin(sel_contracts)
+            ]
+
+            st.dataframe(
+                filtered_df,
+                width="stretch",
+                height=380,
+                hide_index=True,
+                column_config={
+                    "Xac_suat_Churn_Pct": st.column_config.ProgressColumn(
+                        "Xác suất Churn (%)",
+                        format="%.2f%%",
+                        min_value=0,
+                        max_value=100,
+                    ),
+                    "MonthlyCharges": st.column_config.NumberColumn("Cước tháng (USD)", format="$%.2f"),
+                },
+            )
+            st.download_button(
+                "Tải xuống kết quả dự đoán (CSV)",
+                data=filtered_df.to_csv(index=False).encode("utf-8-sig"),
+                file_name="churn_batch_predictions.csv",
+                mime="text/csv",
+            )
 
     # ==================== TAB 3 ====================
     with tab3:
