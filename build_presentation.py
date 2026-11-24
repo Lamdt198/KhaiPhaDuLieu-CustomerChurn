@@ -468,7 +468,7 @@ def build_all_slides():
         notes="Bài tập lớn được phân công rõ ràng cho 5 thành viên Nhóm 02 theo đúng mạch quy trình KDD, đảm bảo tính đồng nhất giữa mã nguồn thực nghiệm, báo cáo Word, ứng dụng demo và slide bảo vệ."
     )
     members = [
-        ("Đỗ Ngọc Điền", "NHÓM TRƯỞNG & KDD", "Xây dựng khung đề tài theo quy trình KDD/CRISP-DM, tổng hợp cơ sở lý thuyết Chương 1 và Kết luận, rà soát thống nhất toàn bộ báo cáo."),
+        ("Đỗ Ngọc Điền", "KHUNG KDD & TỔNG HỢP", "Xây dựng khung đề tài theo quy trình KDD/CRISP-DM, tổng hợp cơ sở lý thuyết Chương 1 và Kết luận, rà soát thống nhất toàn bộ báo cáo."),
         ("Dương Tùng Lâm", "EDA & ĐẶC TRƯNG MIỀN", "Phân tích khám phá bộ dữ liệu 7.043 thuê bao, chạy kiểm định Chi-Square & Mann-Whitney U, thiết kế 6 đặc trưng miền và viết Chương 2."),
         ("Trần Thị Thu Hương", "MÔ HÌNH & 5-FOLD CV", "Xây dựng Anti-Leakage Pipeline, huấn luyện và tinh chỉnh 5 mô hình phân loại qua Stratified 5-Fold GridSearchCV, viết Chương 3."),
         ("Phạm Văn Chiến", "CHI PHÍ, LUẬT & XAI", "Tối ưu ngưỡng nhạy chi phí T* trên OOF Train, rút trích 8 luật CART, giải thích SHAP toàn cục/cục bộ và phân tích lỗi FN/FP (Chương 4)."),

@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 """
 src/portable_engine.py
-Động cơ suy luận LightGBM và giải thích Exact TreeSHAP bằng Python thuần (chuẩn thư viện).
-Không phụ thuộc numpy, pandas, scikit-learn, lightgbm hay shap — tương thích 100% Vercel Serverless.
+Động cơ suy luận 5 mô hình (LightGBM, XGBoost, Random Forest, Decision Tree, Logistic Regression),
+giải thích TreeSHAP / Log-Odds và tính toán ma trận chi phí động bằng Python thuần (chuẩn thư viện).
 """
 
 import csv
@@ -10,7 +10,14 @@ import io
 import json
 import math
 import random
-from itertools import combinations
+
+MODEL_NAMES = [
+    "LightGBM",
+    "XGBoost",
+    "Random Forest",
+    "Decision Tree (CART)",
+    "Logistic Regression",
+]
 
 ADDON_SERVICE_COLS = [
     "OnlineSecurity",
@@ -243,19 +250,16 @@ def engineer_domain_features(row_dict: dict) -> dict:
 def transform_features(proc_dict: dict, model_json: dict) -> list:
     """Biến đổi từ hồ sơ đã tạo đặc trưng miền sang vector 55 chiều khớp ColumnTransformer."""
     vec = []
-    # 1. Numeric: SimpleImputer(median) + StandardScaler
     num_mean = model_json["num_mean"]
     num_scale = model_json["num_scale"]
     for i, col in enumerate(NUMERIC_FEATURES):
         v = _to_float(proc_dict.get(col), model_json["num_medians"][i])
         vec.append((v - num_mean[i]) / num_scale[i])
 
-    # 2. Binary numeric: SimpleImputer(most_frequent)
     for i, col in enumerate(BINARY_NUMERIC_FEATURES):
         v = _to_float(proc_dict.get(col), model_json["bin_modes"][i])
         vec.append(v)
 
-    # 3. Categorical: SimpleImputer(most_frequent) + OneHotEncoder
     cat_modes = model_json["cat_modes"]
     cat_cats = model_json["cat_categories"]
     for i, col in enumerate(CATEGORICAL_FEATURES):
@@ -267,80 +271,161 @@ def transform_features(proc_dict: dict, model_json: dict) -> list:
     return vec
 
 
-def _eval_tree(node: dict, x: list) -> float:
-    while "leaf_value" not in node:
-        if x[node["split_feature"]] <= node["threshold"]:
-            node = node["left_child"]
+def _eval_compact_tree(node: dict, x: list, strict_lt: bool = False) -> float:
+    while "l" not in node:
+        go_left = (x[node["f"]] < node["t"]) if strict_lt else (x[node["f"]] <= node["t"])
+        node = node["L"] if go_left else node["R"]
+    return node["l"]
+
+
+def _extend_path(path, unique_depth, zero_frac, one_frac, feat_idx):
+    """Lundberg et al. (2018) EXTEND step for exact Path-Dependent TreeSHAP."""
+    new_path = [dict(p) for p in path[:unique_depth]]
+    new_path.append({"d": feat_idx, "z": zero_frac, "o": one_frac, "w": 1.0 if unique_depth == 0 else 0.0})
+    for i in range(unique_depth - 1, -1, -1):
+        new_path[i + 1]["w"] += one_frac * new_path[i]["w"] * (i + 1) / (unique_depth + 1)
+        new_path[i]["w"] = zero_frac * new_path[i]["w"] * (unique_depth - i) / (unique_depth + 1)
+    return new_path
+
+
+def _unwind_path(path, unique_depth, idx):
+    """Lundberg et al. (2018) UNWIND step for exact Path-Dependent TreeSHAP."""
+    new_path = [dict(p) for p in path[: unique_depth + 1]]
+    n = float(new_path[unique_depth]["w"])
+    one_frac = new_path[idx]["o"]
+    zero_frac = new_path[idx]["z"]
+    for i in range(unique_depth - 1, -1, -1):
+        if one_frac != 0.0:
+            t = new_path[i]["w"]
+            new_path[i]["w"] = n * (unique_depth + 1) / ((i + 1) * one_frac)
+            n = t - new_path[i]["w"] * zero_frac * (unique_depth - i) / (unique_depth + 1)
         else:
-            node = node["right_child"]
-    return node["leaf_value"]
+            new_path[i]["w"] = (new_path[i]["w"] * (unique_depth + 1)) / (zero_frac * (unique_depth - i))
+    for i in range(idx, unique_depth):
+        new_path[i]["d"] = new_path[i + 1]["d"]
+        new_path[i]["z"] = new_path[i + 1]["z"]
+        new_path[i]["o"] = new_path[i + 1]["o"]
+    return new_path
 
 
-def _eval_tree_cond(node: dict, x: list, active_set: set) -> float:
-    if "leaf_value" in node:
-        return node["leaf_value"]
-    f = node["split_feature"]
-    if f in active_set:
-        nxt = node["left_child"] if x[f] <= node["threshold"] else node["right_child"]
-        return _eval_tree_cond(nxt, x, active_set)
-    c_left = node["left_child"].get("internal_count", node["left_child"].get("leaf_count", 1))
-    c_right = node["right_child"].get("internal_count", node["right_child"].get("leaf_count", 1))
-    tot = c_left + c_right
-    return (
-        (c_left / tot) * _eval_tree_cond(node["left_child"], x, active_set)
-        + (c_right / tot) * _eval_tree_cond(node["right_child"], x, active_set)
-    )
+def _unwound_sum(path, unique_depth, idx):
+    """Lundberg et al. (2018) UNWOUNDSUM helper."""
+    one_frac = path[idx]["o"]
+    zero_frac = path[idx]["z"]
+    next_one = path[unique_depth]["w"]
+    total = 0.0
+    if one_frac != 0.0:
+        for i in range(unique_depth - 1, -1, -1):
+            w_val = next_one * (unique_depth + 1) / ((i + 1) * one_frac)
+            total += w_val
+            next_one = path[i]["w"] - w_val * zero_frac * (unique_depth - i) / (unique_depth + 1)
+    else:
+        for i in range(unique_depth - 1, -1, -1):
+            total += (path[i]["w"] * (unique_depth + 1)) / (zero_frac * (unique_depth - i))
+    return total
 
 
-def _collect_tree_features(node: dict, acc: set):
-    if "split_feature" in node:
-        acc.add(node["split_feature"])
-        _collect_tree_features(node["left_child"], acc)
-        _collect_tree_features(node["right_child"], acc)
+def _tree_shap_recursive(node: dict, x: list, shap_acc: list, strict_lt: bool = False, scale: float = 1.0):
+    """Tính Exact Path-Dependent TreeSHAP trong O(L * D^2) cho cây quyết định bất kỳ."""
+    def recurse(u, m_depth, p, parent_z, parent_o, parent_feat):
+        m_ext = _extend_path(p, m_depth, parent_z, parent_o, parent_feat)
+        if "l" in u:
+            leaf_val = u["l"] * scale
+            for i in range(1, m_depth + 1):
+                w = _unwound_sum(m_ext, m_depth, i)
+                d = m_ext[i]["d"]
+                shap_acc[d] += w * (m_ext[i]["o"] - m_ext[i]["z"]) * leaf_val
+            return
+
+        feat = u["f"]
+        go_left = (x[feat] < u["t"]) if strict_lt else (x[feat] <= u["t"])
+        hot_child = u["L"] if go_left else u["R"]
+        cold_child = u["R"] if go_left else u["L"]
+        c_hot = float(hot_child["c"])
+        c_cold = float(cold_child["c"])
+        c_tot = float(u["c"]) if u["c"] else (c_hot + c_cold)
+
+        inc_z = 1.0
+        inc_o = 1.0
+        new_depth = m_depth + 1
+        k_idx = -1
+        for i in range(1, new_depth):
+            if m_ext[i]["d"] == feat:
+                k_idx = i
+                break
+        if k_idx != -1:
+            inc_z = m_ext[k_idx]["z"]
+            inc_o = m_ext[k_idx]["o"]
+            m_ext = _unwind_path(m_ext, new_depth - 1, k_idx)
+            new_depth -= 1
+
+        recurse(hot_child, new_depth, m_ext, inc_z * (c_hot / c_tot), inc_o, feat)
+        recurse(cold_child, new_depth, m_ext, inc_z * (c_cold / c_tot), 0.0, feat)
+
+    recurse(node, 0, [{}], 1.0, 1.0, -1)
 
 
-def predict_proba_row(row_dict: dict, model_json: dict) -> float:
-    """Tính xác suất Churn nhanh cho một hồ sơ (dùng cho chấm điểm hàng loạt)."""
-    proc = engineer_domain_features(row_dict)
-    x = transform_features(proc, model_json)
-    raw = sum(_eval_tree(tree, x) for tree in model_json["trees"])
+def _predict_vec(x: list, model_json: dict, model_name: str = "LightGBM") -> float:
+    if model_name == "LightGBM":
+        raw = sum(_eval_compact_tree(t, x, strict_lt=False) for t in model_json["trees"])
+        return 1.0 / (1.0 + math.exp(-raw))
+    if model_name == "XGBoost":
+        raw = model_json["xgb_base_margin"] + sum(_eval_compact_tree(t, x, strict_lt=True) for t in model_json["xgb_trees"])
+        return 1.0 / (1.0 + math.exp(-raw))
+    if model_name == "Random Forest":
+        trees = model_json["rf_trees"]
+        return sum(_eval_compact_tree(t, x, strict_lt=False) for t in trees) / len(trees)
+    if model_name == "Decision Tree (CART)":
+        return _eval_compact_tree(model_json["dt_tree"], x, strict_lt=False)
+    if model_name == "Logistic Regression":
+        coef = model_json["lr_coef"]
+        z = model_json["lr_intercept"] + sum(w * xi for w, xi in zip(coef, x))
+        return 1.0 / (1.0 + math.exp(-z))
+    raw = sum(_eval_compact_tree(t, x, strict_lt=False) for t in model_json["trees"])
     return 1.0 / (1.0 + math.exp(-raw))
 
 
-def predict_and_shap(row_dict: dict, model_json: dict, top_k: int = 8) -> dict:
-    """Dự đoán xác suất và tính Exact TreeSHAP cho một hồ sơ."""
+def predict_proba_row(row_dict: dict, model_json: dict, model_name: str = "LightGBM") -> float:
+    """Tính xác suất Churn cho một hồ sơ bằng mô hình được chọn."""
+    proc = engineer_domain_features(row_dict)
+    x = transform_features(proc, model_json)
+    return _predict_vec(x, model_json, model_name)
+
+
+def predict_all_models(row_dict: dict, model_json: dict) -> dict:
+    """Tính xác suất Churn của cả 5 mô hình trên cùng một hồ sơ."""
+    proc = engineer_domain_features(row_dict)
+    x = transform_features(proc, model_json)
+    return {name: round(_predict_vec(x, model_json, name), 6) for name in MODEL_NAMES}
+
+
+def predict_and_shap(row_dict: dict, model_json: dict, top_k: int = 8, model_name: str = "LightGBM") -> dict:
+    """Dự đoán xác suất và tính giá trị đóng góp đặc trưng (TreeSHAP / Log-Odds) cho một hồ sơ."""
     proc = engineer_domain_features(row_dict)
     x = transform_features(proc, model_json)
     feat_names = model_json["tree_feature_names"]
     shap_vals = [0.0] * len(feat_names)
-    raw_score = 0.0
 
-    for root in model_json["trees"]:
-        feats_set = set()
-        _collect_tree_features(root, feats_set)
-        feats = sorted(feats_set)
-        m = len(feats)
-        if m == 0:
-            raw_score += root.get("leaf_value", 0.0)
-            continue
+    if model_name == "LightGBM":
+        for root in model_json["trees"]:
+            _tree_shap_recursive(root, x, shap_vals, strict_lt=False, scale=1.0)
+    elif model_name == "XGBoost":
+        for root in model_json["xgb_trees"]:
+            _tree_shap_recursive(root, x, shap_vals, strict_lt=True, scale=1.0)
+    elif model_name == "Random Forest":
+        trees = model_json["rf_trees"]
+        sc = 1.0 / len(trees)
+        for root in trees:
+            _tree_shap_recursive(root, x, shap_vals, strict_lt=False, scale=sc)
+    elif model_name == "Decision Tree (CART)":
+        _tree_shap_recursive(model_json["dt_tree"], x, shap_vals, strict_lt=False, scale=1.0)
+    elif model_name == "Logistic Regression":
+        coef = model_json["lr_coef"]
+        means = model_json.get("train_feature_means", [0.0] * len(x))
+        shap_vals = [w * (xi - mu) for w, xi, mu in zip(coef, x, means)]
 
-        vals = {}
-        for k in range(m + 1):
-            for sub in combinations(feats, k):
-                vals[frozenset(sub)] = _eval_tree_cond(root, x, set(sub))
-
-        raw_score += vals[frozenset(feats)]
-        fact_m = math.factorial(m)
-        for f in feats:
-            others = [o for o in feats if o != f]
-            for k in range(len(others) + 1):
-                w = (math.factorial(k) * math.factorial(m - k - 1)) / fact_m
-                for sub in combinations(others, k):
-                    s0 = frozenset(sub)
-                    s1 = frozenset(sub + (f,))
-                    shap_vals[f] += w * (vals[s1] - vals[s0])
-
-    prob = 1.0 / (1.0 + math.exp(-raw_score))
+    prob = _predict_vec(x, model_json, model_name)
+    all_probs = {name: round(_predict_vec(x, model_json, name), 6) for name in MODEL_NAMES}
     ranked_idx = sorted(range(len(shap_vals)), key=lambda j: abs(shap_vals[j]), reverse=True)[:top_k]
     top_shap = [
         {
@@ -351,7 +436,9 @@ def predict_and_shap(row_dict: dict, model_json: dict, top_k: int = 8) -> dict:
         for j in ranked_idx
     ]
     return {
+        "model_name": model_name,
         "probability": prob,
+        "all_model_probs": all_probs,
         "shap_values": shap_vals,
         "top_shap": top_shap,
         "domain_features": {
@@ -404,8 +491,14 @@ def build_recommendations(row_dict: dict, prob: float, thr: float) -> list:
     return recs
 
 
-def batch_predict_csv(csv_text: str, threshold: float, model_json: dict) -> dict:
-    """Chấm điểm toàn bộ tệp CSV khách hàng bằng Python thuần."""
+def batch_predict_csv(
+    csv_text: str,
+    threshold: float,
+    model_json: dict,
+    model_name: str = "LightGBM",
+    c_fp: float = 100.0,
+) -> dict:
+    """Chấm điểm toàn bộ tệp CSV khách hàng bằng mô hình được chọn."""
     reader = csv.DictReader(io.StringIO(csv_text.strip()))
     rows_out = []
     n_high_50 = 0
@@ -413,7 +506,7 @@ def batch_predict_csv(csv_text: str, threshold: float, model_json: dict) -> dict
     n_low = 0
 
     for idx, row in enumerate(reader, start=1):
-        prob = predict_proba_row(row, model_json)
+        prob = predict_proba_row(row, model_json, model_name=model_name)
         prob_pct = round(prob * 100, 2)
         if prob >= 0.50:
             tier = "Nguy cơ cao (>= 50%)"
@@ -443,15 +536,118 @@ def batch_predict_csv(csv_text: str, threshold: float, model_json: dict) -> dict
     total = len(rows_out)
     n_intervene = n_high_50 + n_warn
     return {
+        "model_name": model_name,
         "total": total,
         "n_intervene": n_intervene,
         "n_high_50": n_high_50,
         "n_warn": n_warn,
         "n_low": n_low,
         "intervene_pct": round((n_intervene / total * 100) if total else 0.0, 1),
-        "budget_usd": n_intervene * 100,
+        "budget_usd": round(n_intervene * float(c_fp), 2),
         "rows": rows_out,
     }
+
+
+def compute_threshold_metrics(
+    y_true: list,
+    y_prob: list,
+    threshold: float,
+    c_fn: float = 500.0,
+    c_fp: float = 100.0,
+) -> dict:
+    """Tính toàn bộ chỉ số phân loại và chi phí thực nghiệm tại ngưỡng threshold."""
+    tn = fp = fn = tp = 0
+    for yt, yp in zip(y_true, y_prob):
+        pred = 1 if yp >= threshold else 0
+        if yt == 1 and pred == 1:
+            tp += 1
+        elif yt == 0 and pred == 1:
+            fp += 1
+        elif yt == 1 and pred == 0:
+            fn += 1
+        else:
+            tn += 1
+    total = tn + fp + fn + tp
+    acc = (tp + tn) / total if total else 0.0
+    prec = tp / (tp + fp) if (tp + fp) else 0.0
+    rec = tp / (tp + fn) if (tp + fn) else 0.0
+    f1 = (2 * prec * rec / (prec + rec)) if (prec + rec) else 0.0
+    total_cost = (fp + tp) * float(c_fp) + fn * float(c_fn)
+    do_nothing_cost = (tp + fn) * float(c_fn)
+    savings = do_nothing_cost - total_cost
+    savings_pct = (savings / do_nothing_cost * 100.0) if do_nothing_cost > 0 else 0.0
+    return {
+        "threshold": round(float(threshold), 2),
+        "accuracy": round(acc, 4),
+        "precision": round(prec, 4),
+        "recall": round(rec, 4),
+        "f1": round(f1, 4),
+        "tn": tn,
+        "fp": fp,
+        "fn": fn,
+        "tp": tp,
+        "targeted": tp + fp,
+        "total_cost_usd": round(total_cost, 2),
+        "avg_cost_usd": round(total_cost / total if total else 0.0, 2),
+        "do_nothing_cost_usd": round(do_nothing_cost, 2),
+        "savings_usd": round(savings, 2),
+        "savings_pct": round(savings_pct, 1),
+    }
+
+
+def find_optimal_threshold(
+    y_true: list,
+    y_prob: list,
+    c_fn: float = 500.0,
+    c_fp: float = 100.0,
+) -> tuple:
+    """Tìm ngưỡng T* tối ưu chi phí thấp nhất trong [0.05, 0.85] và trả về đường cong chi phí."""
+    curve = []
+    best_thr = 0.20
+    best_cost = float("inf")
+    for i in range(5, 86):
+        thr = round(i / 100.0, 2)
+        m = compute_threshold_metrics(y_true, y_prob, thr, c_fn=c_fn, c_fp=c_fp)
+        curve.append({"threshold": thr, "total_cost_usd": m["total_cost_usd"], "recall": m["recall"]})
+        if m["total_cost_usd"] < best_cost:
+            best_cost = m["total_cost_usd"]
+            best_thr = thr
+    return best_thr, curve
+
+
+def compute_dynamic_roi_strategies(
+    y_true: list,
+    y_prob: list,
+    model_name: str,
+    threshold: float,
+    c_fn: float = 500.0,
+    c_fp: float = 100.0,
+) -> list:
+    """Đối chứng chiến lược Do Nothing vs Blanket 100% vs Mô hình đang chọn tại ngưỡng T."""
+    total_n = len(y_true)
+    total_churn = sum(1 for y in y_true if y == 1)
+    cost_nothing = total_churn * float(c_fn)
+    cost_blanket = total_n * float(c_fp)
+    m = compute_threshold_metrics(y_true, y_prob, threshold, c_fn=c_fn, c_fp=c_fp)
+
+    def _row(label, targeted, caught, missed, cost):
+        sav = cost_nothing - cost
+        pct = round((sav / cost_nothing * 100.0) if cost_nothing > 0 else 0.0, 1)
+        return {
+            "Chiến lược": label,
+            "Số KH can thiệp": targeted,
+            "Churn giữ được (TP)": caught,
+            "Churn bỏ sót (FN)": missed,
+            "Tổng chi phí (USD)": round(cost, 2),
+            "Tiết kiệm (USD)": round(sav, 2),
+            "Tỷ lệ tiết kiệm (%)": pct,
+        }
+
+    return [
+        _row("Không can thiệp (Do Nothing)", 0, 0, total_churn, cost_nothing),
+        _row("Ưu đãi đại trà 100% (Blanket)", total_n, total_churn, 0, cost_blanket),
+        _row(f"{model_name} (T = {threshold:.2f})", m["targeted"], m["tp"], m["fn"], m["total_cost_usd"]),
+    ]
 
 
 def generate_random_sample_csv(raw_csv_path: str, n_rows: int = 100, seed: int = None) -> str:
@@ -470,4 +666,3 @@ def generate_random_sample_csv(raw_csv_path: str, n_rows: int = 100, seed: int =
     writer.writeheader()
     writer.writerows(sampled)
     return buf.getvalue()
-
