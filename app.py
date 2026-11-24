@@ -87,9 +87,9 @@ def _compute_live_eval_payload(
             "F1 (T)": f"{m_at_t['f1']:.4f}",
             "TP / FN": f"{m_at_t['tp']} / {m_at_t['fn']}",
             "FP": m_at_t["fp"],
-            "Chi phí tại T (USD)": m_at_t["total_cost_usd"],
+            "Chi phí tại T ($)": m_at_t["total_cost_usd"],
             "T* tối ưu": f"{m_thr_opt:.2f}",
-            "Chi phí tại T* (USD)": m_at_opt["total_cost_usd"],
+            "Chi phí tại T* ($)": m_at_opt["total_cost_usd"],
         })
 
     return {
@@ -1387,13 +1387,18 @@ def _streamlit_css(is_dark: bool) -> str:
     }}
     @keyframes stspin {{ to {{ transform: rotate(360deg); }} }}
 
-    /* High-Specificity Tabs Styling (Light + Dark) */
+    /* High-Specificity Tabs Styling (Streamlit 1.64 stTab + React Aria + BaseWeb fallback) */
     .stApp .stTabs [data-baseweb="tab-highlight"],
-    .stApp .stTabs [data-baseweb="tab-border"] {{
+    .stApp .stTabs [data-baseweb="tab-border"],
+    .stApp .stTabs [role="tablist"]::after,
+    .stApp .stTabs [data-testid="stTab"]::after,
+    .stApp .stTabs .react-aria-SelectionIndicator {{
         display: none !important;
         height: 0 !important;
+        border: none !important;
         background: transparent !important;
     }}
+    .stApp .stTabs [role="tablist"],
     .stApp .stTabs [data-baseweb="tab-list"] {{
         gap: 8px !important;
         background-color: {t['surface']} !important;
@@ -1403,9 +1408,11 @@ def _streamlit_css(is_dark: bool) -> str:
         border-bottom: 1px solid {t['border']} !important;
         margin-bottom: 14px !important;
     }}
+    .stApp .stTabs [data-testid="stTab"],
+    .stApp .stTabs [role="tab"],
     .stApp .stTabs [data-baseweb="tab"] {{
         height: 40px !important;
-        padding: 8px 18px !important;
+        padding: 8px 15px !important;
         border-radius: 7px !important;
         font-weight: 600 !important;
         font-size: 13.5px !important;
@@ -1413,28 +1420,51 @@ def _streamlit_css(is_dark: bool) -> str:
         background-color: {t['surface_alt']} !important;
         border: 1px solid {t['border']} !important;
         margin: 0 !important;
+        cursor: pointer !important;
         transition: all 0.18s ease !important;
     }}
+    .stApp .stTabs [data-testid="stTab"] *,
+    .stApp .stTabs [data-testid="stTab"] div[data-testid="stMarkdownContainer"] p,
+    .stApp .stTabs [role="tab"] *,
+    .stApp .stTabs [role="tab"] p,
     .stApp .stTabs [data-baseweb="tab"] *,
     .stApp .stTabs [data-baseweb="tab"] p,
     .stApp .stTabs [data-baseweb="tab"] span {{
         color: {t['muted']} !important;
     }}
+    .stApp .stTabs [data-testid="stTab"]:hover,
+    .stApp .stTabs [role="tab"]:hover,
     .stApp .stTabs [data-baseweb="tab"]:hover {{
         background-color: {t['accent_soft']} !important;
         color: {t['accent_text']} !important;
         border-color: {t['accent_text']} !important;
     }}
+    .stApp .stTabs [data-testid="stTab"]:hover *,
+    .stApp .stTabs [data-testid="stTab"]:hover div[data-testid="stMarkdownContainer"] p,
+    .stApp .stTabs [data-testid="stTab"]:hover p,
+    .stApp .stTabs [role="tab"]:hover *,
+    .stApp .stTabs [role="tab"]:hover p,
     .stApp .stTabs [data-baseweb="tab"]:hover *,
     .stApp .stTabs [data-baseweb="tab"]:hover p {{
         color: {t['accent_text']} !important;
     }}
+    .stApp .stTabs [data-testid="stTab"][aria-selected="true"],
+    .stApp .stTabs [data-testid="stTab"][aria-selected="true"]:hover,
+    .stApp .stTabs [role="tab"][aria-selected="true"],
+    .stApp .stTabs [role="tab"][aria-selected="true"]:hover,
     .stApp .stTabs [data-baseweb="tab"][aria-selected="true"],
     .stApp .stTabs [data-baseweb="tab"][aria-selected="true"]:hover {{
         background-color: {t['accent_bg']} !important;
         color: #FFFFFF !important;
         border-color: {t['accent_bg']} !important;
     }}
+    .stApp .stTabs [data-testid="stTab"][aria-selected="true"] *,
+    .stApp .stTabs [data-testid="stTab"][aria-selected="true"]:hover *,
+    .stApp .stTabs [data-testid="stTab"][aria-selected="true"] div[data-testid="stMarkdownContainer"] p,
+    .stApp .stTabs [data-testid="stTab"][aria-selected="true"]:hover div[data-testid="stMarkdownContainer"] p,
+    .stApp .stTabs [role="tab"][aria-selected="true"] *,
+    .stApp .stTabs [role="tab"][aria-selected="true"]:hover *,
+    .stApp .stTabs [role="tab"][aria-selected="true"] p,
     .stApp .stTabs [data-baseweb="tab"][aria-selected="true"] *,
     .stApp .stTabs [data-baseweb="tab"][aria-selected="true"]:hover * {{
         color: #FFFFFF !important;
@@ -1450,7 +1480,7 @@ def _streamlit_css(is_dark: bool) -> str:
     .tbl-clean {{
         width: 100%;
         border-collapse: collapse;
-        font-size: 12.5px;
+        font-size: 12px;
         color: {t['text']};
     }}
     .tbl-clean th {{
@@ -1458,12 +1488,12 @@ def _streamlit_css(is_dark: bool) -> str:
         color: {t['muted']};
         font-weight: 700;
         text-align: left;
-        padding: 9px 11px;
+        padding: 8px 8px;
         border-bottom: 1px solid {t['border']};
         white-space: nowrap;
     }}
     .tbl-clean td {{
-        padding: 8px 11px;
+        padding: 8px 8px;
         border-bottom: 1px solid {t['border']};
         color: {t['text']};
     }}
@@ -1473,21 +1503,24 @@ def _streamlit_css(is_dark: bool) -> str:
         font-weight: 700;
     }}
 
-    .hero-banner {{
+    .stApp .stMarkdown .hero-banner,
+    .stApp .hero-banner {{
         background: {t['hero_bg']};
         padding: 20px 26px;
         border-radius: 8px;
         border-bottom: 3px solid #D97706;
         margin-bottom: 16px;
     }}
-    .hero-banner h1 {{
+    .stApp .stMarkdown .hero-banner h1,
+    .stApp .hero-banner h1 {{
         color: #FFFFFF !important;
         margin: 0;
         font-size: 21px;
         font-weight: 700;
         line-height: 1.3;
     }}
-    .hero-banner p {{
+    .stApp .stMarkdown .hero-banner p,
+    .stApp .hero-banner p {{
         color: {t['hero_sub']} !important;
         margin: 5px 0 0 0;
         font-size: 13px;
@@ -2489,7 +2522,7 @@ def run_streamlit_app():
             "Đối sánh cố định & ROC/PR",
             "Ablation Study",
             "Khám phá dữ liệu (EDA)",
-            "Giải thích SHAP & Luật CART",
+            "SHAP & Luật CART",
         ])
 
         with sub0:
